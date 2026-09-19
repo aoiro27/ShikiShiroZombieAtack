@@ -14,6 +14,7 @@ namespace ShikiShiro
         private ArenaBuilder _arena;
         private float _verticalVelocity;
         private float _recoilPitch;
+        private bool _hadTouchLastFrame;
 
         public void Initialize(GameInput input, GameConfig config)
         {
@@ -97,9 +98,12 @@ namespace ShikiShiro
                 Yaw += gyro.x * g;
                 Pitch += gyro.y * g;
             }
-            else if (look.sqrMagnitude <= 0.0001f)
+            else if (look.sqrMagnitude <= 0.0001f && CanUseMouseLook())
             {
                 Vector2 mouse = GameInput.MouseDelta();
+                const float maxMouse = 80f;
+                mouse.x = Mathf.Clamp(mouse.x, -maxMouse, maxMouse);
+                mouse.y = Mathf.Clamp(mouse.y, -maxMouse, maxMouse);
                 Yaw += mouse.x * _config.EditorLookSensitivity;
                 Pitch -= mouse.y * _config.EditorLookSensitivity;
             }
@@ -126,6 +130,14 @@ namespace ShikiShiro
             Vector3 velocity = planar * speed + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
             ConstrainToArena();
+        }
+
+        private bool CanUseMouseLook()
+        {
+            bool hasTouch = Input.touchCount > 0;
+            bool block = Application.isMobilePlatform || hasTouch || _hadTouchLastFrame;
+            _hadTouchLastFrame = hasTouch;
+            return !block;
         }
 
         public void ResetToSpawn()

@@ -41,7 +41,15 @@ WASD 移動、マウス視点、左クリック/Space 射撃、R リロード、
 
 ## iPad ビルド
 
-Build Settings → iOS。Player Settings は初期値で iPad Only・横画面・Bundle ID `com.shikishiro.zombieattack`・Automatic Signing。Team ID だけ自分の Apple Developer を入れてください。
+Build Settings → iOS。出力フォルダは毎回同じ場所にしてください。
+
+署名を Xcode でやり直さなくて済む手順:
+
+1. Unity メニュー **式城ゾンビアタック / iOS 署名 (Team ID)** を開き、Xcode の Signing & Capabilities に出ている 10 文字の Team ID を保存する（この Mac にだけ残ります）
+2. Player Settings は Automatic Signing・Bundle ID `com.shikishiro.zombieattack`
+3. 以降は Unity からビルドするだけで、生成された Xcode プロジェクトに同じチームが入る
+
+Xcode 側で毎回 Signing を触る必要はありません。実機へは Xcode で Run するだけです。
 
 ## クレジット
 

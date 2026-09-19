@@ -116,7 +116,7 @@ namespace ShikiShiro
             }
 
             const float maxStep = 24f;
-            return new Vector2(Mathf.Clamp(yaw, -maxStep, maxStep), Mathf.Clamp(-pitch, -maxStep, maxStep));
+            return new Vector2(Mathf.Clamp(yaw, -maxStep, maxStep), Mathf.Clamp(pitch, -maxStep, maxStep));
         }
 
         private static Quaternion ScreenMappedGyro(Quaternion attitude)

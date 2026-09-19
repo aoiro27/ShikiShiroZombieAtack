@@ -33,6 +33,7 @@ namespace ShikiShiro
             }
 
             _started = true;
+            Input.simulateMouseWithTouches = false;
             StripForeignSceneObjects();
             Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;

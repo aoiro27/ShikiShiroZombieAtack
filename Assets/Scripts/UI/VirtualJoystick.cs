@@ -14,6 +14,7 @@ namespace ShikiShiro
         private RectTransform _root;
         private Vector2 _pointerStart;
         private bool _held;
+        private int _pointerId = int.MinValue;
 
         public void Configure(RectTransform handle, float radius)
         {
@@ -24,14 +25,20 @@ namespace ShikiShiro
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            if (_held)
+            {
+                return;
+            }
+
             _held = true;
+            _pointerId = eventData.pointerId;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_root, eventData.position, eventData.pressEventCamera, out _pointerStart);
             OnDrag(eventData);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (!_held)
+            if (!_held || eventData.pointerId != _pointerId)
             {
                 return;
             }
@@ -49,7 +56,13 @@ namespace ShikiShiro
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            if (eventData.pointerId != _pointerId)
+            {
+                return;
+            }
+
             _held = false;
+            _pointerId = int.MinValue;
             Value = Vector2.zero;
             if (_handle != null)
             {
