@@ -105,11 +105,28 @@ namespace ShikiShiro
                 return Vector2.zero;
             }
 
-            Quaternion delta = att * Quaternion.Inverse(_prevGyroAtt);
+            Vector3 prevFwd = _prevGyroAtt * Vector3.forward;
+            Vector3 nowFwd = att * Vector3.forward;
             _prevGyroAtt = att;
-            Vector3 euler = delta.eulerAngles;
-            float yaw = Mathf.DeltaAngle(0f, euler.y);
-            float pitch = Mathf.DeltaAngle(0f, euler.x);
+
+            Vector3 prevFlat = prevFwd;
+            Vector3 nowFlat = nowFwd;
+            prevFlat.y = 0f;
+            nowFlat.y = 0f;
+            float yaw = 0f;
+            if (prevFlat.sqrMagnitude > 0.0025f && nowFlat.sqrMagnitude > 0.0025f)
+            {
+                yaw = Vector3.SignedAngle(prevFlat, nowFlat, Vector3.up);
+            }
+
+            float prevPitch = Mathf.Asin(Mathf.Clamp(prevFwd.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float nowPitch = Mathf.Asin(Mathf.Clamp(nowFwd.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float pitch = Mathf.DeltaAngle(prevPitch, nowPitch);
+            if (Mathf.Abs(yaw) > 35f || Mathf.Abs(pitch) > 35f)
+            {
+                return Vector2.zero;
+            }
+
             if (Mathf.Abs(yaw) < 0.04f && Mathf.Abs(pitch) < 0.04f)
             {
                 return Vector2.zero;
@@ -122,19 +139,7 @@ namespace ShikiShiro
         private static Quaternion ScreenMappedGyro(Quaternion attitude)
         {
             Quaternion q = new Quaternion(attitude.x, attitude.y, -attitude.z, -attitude.w);
-            switch (Screen.orientation)
-            {
-                case ScreenOrientation.LandscapeRight:
-                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, -90f);
-                case ScreenOrientation.LandscapeLeft:
-                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, 90f);
-                case ScreenOrientation.Portrait:
-                    return Quaternion.Euler(90f, 0f, 0f) * q;
-                case ScreenOrientation.PortraitUpsideDown:
-                    return Quaternion.Euler(90f, 0f, 180f) * q;
-                default:
-                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, 90f);
-            }
+            return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, 90f);
         }
 
         public static Vector2 MouseDelta()

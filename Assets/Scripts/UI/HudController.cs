@@ -688,8 +688,8 @@ namespace ShikiShiro
             rack.transform.SetParent(parent, false);
             var rackRt = rack.GetComponent<RectTransform>();
             rackRt.anchorMin = rackRt.anchorMax = rackRt.pivot = new Vector2(0f, 0f);
-            rackRt.anchoredPosition = new Vector2(36f, 390f);
-            rackRt.sizeDelta = new Vector2(168f, 320f);
+            rackRt.anchoredPosition = new Vector2(32f, 380f);
+            rackRt.sizeDelta = new Vector2(236f, 460f);
 
             for (int i = 0; i < icons.Length; i++)
             {
@@ -697,8 +697,8 @@ namespace ShikiShiro
                 var frame = CreateSprite(rack.transform, "WeaponSlot" + i, UiSprites.Panel, new Color(1f, 1f, 1f, 0.92f));
                 var rt = frame.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
-                rt.anchoredPosition = new Vector2(0f, 8f + i * 104f);
-                rt.sizeDelta = new Vector2(158f, 96f);
+                rt.anchoredPosition = new Vector2(0f, 10f + i * 148f);
+                rt.sizeDelta = new Vector2(220f, 136f);
                 var frameImg = frame.GetComponent<Image>();
                 frameImg.type = Image.Type.Sliced;
                 frameImg.preserveAspect = false;
@@ -709,7 +709,7 @@ namespace ShikiShiro
                 var iRt = icon.GetComponent<RectTransform>();
                 iRt.anchorMin = iRt.anchorMax = iRt.pivot = new Vector2(0.5f, 0.5f);
                 iRt.anchoredPosition = Vector2.zero;
-                iRt.sizeDelta = new Vector2(140f, 72f);
+                iRt.sizeDelta = new Vector2(196f, 108f);
                 var iconImg = icon.GetComponent<Image>();
                 iconImg.preserveAspect = true;
                 iconImg.raycastTarget = false;

@@ -331,7 +331,7 @@ namespace ShikiShiro
             }
 
             Vector3 sep = Vector3.zero;
-            int count = Physics.OverlapSphereNonAlloc(transform.position, 1.1f, NeighborBuffer, ZombieMask);
+            int count = Physics.OverlapSphereNonAlloc(transform.position, 1.1f, NeighborBuffer, ZombieMask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
                 if (NeighborBuffer[i].transform == transform)

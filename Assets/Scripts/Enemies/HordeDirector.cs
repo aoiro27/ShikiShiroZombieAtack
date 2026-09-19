@@ -36,6 +36,8 @@ namespace ShikiShiro
             var pickupRoot = new GameObject("PickupPool").transform;
             pickupRoot.SetParent(transform, false);
             _pickups = new ObjectPool<WorldPickup>(CreatePickup, pickupRoot, 12);
+
+            BalloonField.Spawn(transform, arena, this, fx, sfx);
         }
 
         public void StartWaves()
@@ -78,60 +80,74 @@ namespace ShikiShiro
 
         public void ChainBurst(ZombieAgent source, in DamageInfo info)
         {
-            if (source == null || info.ChainDepth >= 2)
+            if (source == null)
             {
                 return;
             }
 
-            StartCoroutine(ChainBurstRoutine(source.transform.position, info));
+            ChainBurst(source.transform.position, info);
+        }
+
+        public void ChainBurst(Vector3 origin, in DamageInfo info)
+        {
+            if (info.ChainDepth >= 2)
+            {
+                return;
+            }
+
+            StartCoroutine(ChainBurstRoutine(origin, info));
         }
 
         private IEnumerator ChainBurstRoutine(Vector3 origin, DamageInfo info)
         {
             const float radius = 6.2f;
-            const int maxVictims = 5;
-            var victims = new List<ZombieAgent>(maxVictims);
-            var all = AllZombies;
-            for (int i = 0; i < all.Count && victims.Count < maxVictims; i++)
+            const int maxVictims = 8;
+            int mask = LayerMask.GetMask("Zombie");
+            var hits = new Collider[32];
+            int count = Physics.OverlapSphereNonAlloc(origin, radius, hits, mask, QueryTriggerInteraction.Collide);
+            var victims = new List<IDamageable>(maxVictims);
+            for (int i = 0; i < count && victims.Count < maxVictims; i++)
             {
-                ZombieAgent z = all[i];
-                if (z == null || !z.IsAlive || !z.isActiveAndEnabled)
+                if (hits[i] == null)
                 {
                     continue;
                 }
 
-                Vector3 delta = z.transform.position - origin;
-                delta.y = 0f;
-                if (delta.sqrMagnitude <= radius * radius)
+                var hurt = hits[i].GetComponentInParent<IDamageable>();
+                if (hurt == null || !hurt.IsAlive || hurt is PlayerVitality || victims.Contains(hurt))
                 {
-                    victims.Add(z);
+                    continue;
                 }
+
+                victims.Add(hurt);
             }
 
             int nextDepth = info.ChainDepth + 1;
             for (int i = 0; i < victims.Count; i++)
             {
-                if (_session.State != SessionState.Playing)
+                if (_session.State == SessionState.GameOver)
                 {
                     yield break;
                 }
 
                 yield return new WaitForSeconds(0.045f);
-                ZombieAgent z = victims[i];
-                if (z == null || !z.IsAlive)
+                IDamageable hurt = victims[i];
+                if (hurt == null || !hurt.IsAlive)
                 {
                     continue;
                 }
 
-                Vector3 boom = z.transform.position + Vector3.up * 0.9f;
-                Vector3 dir = (z.transform.position - origin);
+                var mb = hurt as MonoBehaviour;
+                Vector3 pos = mb != null ? mb.transform.position : origin;
+                Vector3 boom = pos + Vector3.up * 0.4f;
+                Vector3 dir = pos - origin;
                 dir.y = 0.4f;
                 if (dir.sqrMagnitude < 0.01f)
                 {
                     dir = Vector3.up;
                 }
 
-                z.ApplyDamage(new DamageInfo(999f, boom, dir.normalized, false, info.Weapon, nextDepth));
+                hurt.ApplyDamage(new DamageInfo(999f, boom, dir.normalized, false, info.Weapon, nextDepth));
             }
         }
 

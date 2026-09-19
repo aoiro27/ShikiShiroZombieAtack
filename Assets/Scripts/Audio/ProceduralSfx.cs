@@ -30,6 +30,7 @@ namespace ShikiShiro
         private AudioClip _smgSynth;
         private AudioClip _shotgunSynth;
         private AudioClip _explosionSynth;
+        private AudioClip _balloonBurst;
         private float _nextGroanAt;
         private Coroutine _clearSting;
 
@@ -51,7 +52,11 @@ namespace ShikiShiro
             _hit = BuildTone(70f, 0.08f, 0.35f, true);
             _bite = BuildBite();
             _pickup = BuildTone(660f, 0.1f, 0.22f, false);
-            _waveClear = BuildWaveClear();
+            _waveClear = LoadWaveClearClip();
+            if (_waveClear == null)
+            {
+                _waveClear = BuildWaveClear();
+            }
             _waveStart = BuildWaveStart();
             _countdownTicks = new[]
             {
@@ -59,6 +64,21 @@ namespace ShikiShiro
                 BuildTone(523.25f, 0.16f, 0.48f, false),
                 BuildTone(659.25f, 0.28f, 0.58f, false)
             };
+            _balloonBurst = Resources.Load<AudioClip>("balloon-burst");
+            if (_balloonBurst != null && !_balloonBurst.preloadAudioData)
+            {
+                _balloonBurst.LoadAudioData();
+            }
+        }
+
+        public void PlayBalloonBurst()
+        {
+            if (_balloonBurst == null)
+            {
+                _balloonBurst = Resources.Load<AudioClip>("balloon-burst");
+            }
+
+            SafeOneShot(_sfx, _balloonBurst, 0.95f);
         }
 
         public void StartBgm()
@@ -239,9 +259,30 @@ namespace ShikiShiro
             _sting.Stop();
             _sting.pitch = 1f;
             _sting.volume = 1f;
+            if (!_waveClear.preloadAudioData)
+            {
+                _waveClear.LoadAudioData();
+            }
+
             _sting.clip = _waveClear;
             _sting.Play();
             _clearSting = null;
+        }
+
+        private static AudioClip LoadWaveClearClip()
+        {
+            AudioClip clip = Resources.Load<AudioClip>("clear");
+            if (clip == null)
+            {
+                clip = GameAssets.Load<AudioClip>("Assets/clear.mp3");
+            }
+
+            if (clip != null && !clip.preloadAudioData)
+            {
+                clip.LoadAudioData();
+            }
+
+            return clip;
         }
 
         public void PlayWaveStart()
