@@ -7,6 +7,8 @@ namespace ShikiShiro
     {
         public event Action<int> WaveChanged;
         public event Action<int> ScoreChanged;
+        public event Action<int> ComboChanged;
+        public event Action<HitPopupInfo> HitPopup;
         public event Action<SessionState> StateChanged;
         public event Action PlayerDied;
 
@@ -19,7 +21,7 @@ namespace ShikiShiro
         public float ComboTimer { get; private set; }
 
         private GameConfig _config;
-            private float _comboWindow = 3.4f;
+        private float _comboWindow = 3.4f;
 
         public void Initialize(GameConfig config)
         {
@@ -34,9 +36,10 @@ namespace ShikiShiro
             Kills = 0;
             Combo = 0;
             ComboTimer = 0f;
-            SetState(SessionState.Playing);
+            SetState(SessionState.Countdown);
             WaveChanged?.Invoke(Wave);
             ScoreChanged?.Invoke(Score);
+            ComboChanged?.Invoke(Combo);
         }
 
         public void NotifyWaveClear()
@@ -52,35 +55,73 @@ namespace ShikiShiro
         public void AdvanceWave()
         {
             Wave++;
-            SetState(SessionState.Playing);
+            SetState(SessionState.Countdown);
             WaveChanged?.Invoke(Wave);
         }
 
-        public void RegisterKill(ZombieKind kind, bool headshot)
+        public void BeginCombat()
         {
-            if (State != SessionState.Playing)
+            if (State != SessionState.Countdown)
             {
                 return;
             }
 
-            Kills++;
-            ComboTimer = _comboWindow;
-            Combo++;
+            SetState(SessionState.Playing);
+        }
 
-            int baseScore = kind switch
+        public int RegisterCombatHit(ZombieKind kind, bool headshot, bool kill)
+        {
+            if (State != SessionState.Playing)
             {
-                ZombieKind.Runner => 120,
-                ZombieKind.Brute => 350,
-                _ => 80
-            };
-
-            if (headshot)
-            {
-                baseScore = Mathf.RoundToInt(baseScore * 1.8f);
+                return 0;
             }
 
-            int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
-            AddScore(baseScore * comboBonus);
+            ComboTimer = _comboWindow;
+            Combo++;
+            int gained;
+            if (kill)
+            {
+                Kills++;
+                int baseScore = kind switch
+                {
+                    ZombieKind.Runner => 120,
+                    ZombieKind.Brute => 350,
+                    _ => 80
+                };
+
+                if (headshot)
+                {
+                    baseScore = Mathf.RoundToInt(baseScore * 1.8f);
+                }
+
+                int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
+                gained = baseScore * comboBonus;
+            }
+            else
+            {
+                gained = headshot ? 16 : 10;
+            }
+
+            AddScore(gained);
+            ComboChanged?.Invoke(Combo);
+            return gained;
+        }
+
+        public void NotifyHitPopup(in HitPopupInfo info)
+        {
+            HitPopup?.Invoke(info);
+        }
+
+        public void BreakCombo()
+        {
+            if (Combo <= 0 && ComboTimer <= 0f)
+            {
+                return;
+            }
+
+            Combo = 0;
+            ComboTimer = 0f;
+            ComboChanged?.Invoke(Combo);
         }
 
         public void NotifyPlayerDeath()
@@ -114,6 +155,7 @@ namespace ShikiShiro
             {
                 Combo = 0;
                 ComboTimer = 0f;
+                ComboChanged?.Invoke(Combo);
             }
         }
 

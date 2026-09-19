@@ -15,6 +15,9 @@ namespace ShikiShiro
 
         private VirtualJoystick _moveStick;
         private VirtualJoystick _lookStick;
+        private Quaternion _prevGyroAtt;
+        private bool _gyroReady;
+        private ScreenOrientation _gyroOrientation;
         private bool _touchFire;
         private bool _touchReload;
         private bool _touchSprint;
@@ -41,7 +44,7 @@ namespace ShikiShiro
             }
 
             Input.gyro.enabled = true;
-            Input.gyro.updateInterval = 0.0167f;
+            Input.gyro.updateInterval = 0.0111f;
         }
 
         public void SetTouchFire(bool held) => _touchFire = held;
@@ -84,37 +87,54 @@ namespace ShikiShiro
             return v;
         }
 
-        private static Vector2 ReadGyro()
+        private Vector2 ReadGyro()
         {
             if (!SystemInfo.supportsGyroscope || !Input.gyro.enabled)
+            {
+                _gyroReady = false;
+                return Vector2.zero;
+            }
+
+            Quaternion att = ScreenMappedGyro(Input.gyro.attitude);
+            ScreenOrientation orient = Screen.orientation;
+            if (!_gyroReady || _gyroOrientation != orient)
+            {
+                _prevGyroAtt = att;
+                _gyroOrientation = orient;
+                _gyroReady = true;
+                return Vector2.zero;
+            }
+
+            Quaternion delta = att * Quaternion.Inverse(_prevGyroAtt);
+            _prevGyroAtt = att;
+            Vector3 euler = delta.eulerAngles;
+            float yaw = Mathf.DeltaAngle(0f, euler.y);
+            float pitch = Mathf.DeltaAngle(0f, euler.x);
+            if (Mathf.Abs(yaw) < 0.04f && Mathf.Abs(pitch) < 0.04f)
             {
                 return Vector2.zero;
             }
 
-            Vector3 rate = Input.gyro.rotationRateUnbiased;
-            float yaw;
-            float pitch;
+            const float maxStep = 24f;
+            return new Vector2(Mathf.Clamp(yaw, -maxStep, maxStep), Mathf.Clamp(-pitch, -maxStep, maxStep));
+        }
+
+        private static Quaternion ScreenMappedGyro(Quaternion attitude)
+        {
+            Quaternion q = new Quaternion(attitude.x, attitude.y, -attitude.z, -attitude.w);
             switch (Screen.orientation)
             {
                 case ScreenOrientation.LandscapeRight:
-                    yaw = rate.z;
-                    pitch = rate.x;
-                    break;
+                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, -90f);
+                case ScreenOrientation.LandscapeLeft:
+                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, 90f);
                 case ScreenOrientation.Portrait:
-                    yaw = -rate.y;
-                    pitch = rate.x;
-                    break;
+                    return Quaternion.Euler(90f, 0f, 0f) * q;
                 case ScreenOrientation.PortraitUpsideDown:
-                    yaw = rate.y;
-                    pitch = -rate.x;
-                    break;
+                    return Quaternion.Euler(90f, 0f, 180f) * q;
                 default:
-                    yaw = -rate.z;
-                    pitch = -rate.x;
-                    break;
+                    return Quaternion.Euler(90f, 0f, 0f) * q * Quaternion.Euler(0f, 0f, 90f);
             }
-
-            return new Vector2(yaw, pitch) * Mathf.Rad2Deg;
         }
 
         public static Vector2 MouseDelta()

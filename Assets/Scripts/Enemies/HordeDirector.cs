@@ -14,11 +14,8 @@ namespace ShikiShiro
         private ProceduralSfx _sfx;
         private ObjectPool<ZombieAgent> _zombies;
         private ObjectPool<WorldPickup> _pickups;
-        private int _remainingToSpawn;
         private int _alive;
         private HudController _hud;
-
-        private float _lastPackAngle = 999f;
 
         public IReadOnlyList<ZombieAgent> AllZombies => _zombies != null ? _zombies.All : System.Array.Empty<ZombieAgent>();
 
@@ -59,12 +56,7 @@ namespace ShikiShiro
             }
 
             Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
-            if (!_arena.Contains(origin, 2f))
-            {
-                origin = _arena.SpawnPoint;
-            }
-
-            Vector3 pos = PlaceAround(origin, 8f, 16f);
+            Vector3 pos = PlaceAround(_arena.SpawnPoint + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(20f, 34f), 0.5f, 2.2f, origin, 16f);
             agent.Warp(pos);
         }
 
@@ -97,7 +89,7 @@ namespace ShikiShiro
         private IEnumerator ChainBurstRoutine(Vector3 origin, DamageInfo info)
         {
             const float radius = 6.2f;
-            const int maxVictims = 12;
+            const int maxVictims = 5;
             var victims = new List<ZombieAgent>(maxVictims);
             var all = AllZombies;
             for (int i = 0; i < all.Count && victims.Count < maxVictims; i++)
@@ -147,37 +139,24 @@ namespace ShikiShiro
         {
             yield return null;
             Physics.SyncTransforms();
-            yield return new WaitForSeconds(3f);
 
             while (_session.State != SessionState.GameOver)
             {
                 int wave = _session.Wave;
-                _remainingToSpawn = 16 + wave * 8;
+                ResetPlayerToStart();
+                Physics.SyncTransforms();
                 _alive = 0;
-                _hud.Announce($"WAVE {wave}");
-                _sfx.PlayRoar();
-                _lastPackAngle = 999f;
+                SpawnWave(WaveSize(wave), wave);
 
-                while (_remainingToSpawn > 0 && _session.State == SessionState.Playing)
+                yield return WaveCountdown(wave);
+                if (_session.State == SessionState.GameOver)
                 {
-                    while (_alive >= _config.MaxAliveZombies && _session.State == SessionState.Playing)
-                    {
-                        yield return null;
-                    }
-
-                    if (_session.State != SessionState.Playing)
-                    {
-                        break;
-                    }
-
-                    int pack = Mathf.Clamp(8 + wave, 8, 18);
-                    pack = Mathf.Min(pack, _remainingToSpawn);
-                    yield return SpawnPack(pack, wave);
-                    if (_remainingToSpawn > 0 && _session.State == SessionState.Playing)
-                    {
-                        yield return new WaitForSeconds(Mathf.Lerp(3.4f, 1.8f, Mathf.Clamp01(wave / 8f)));
-                    }
+                    yield break;
                 }
+
+                _session.BeginCombat();
+                _sfx.PlayRoar();
+                _sfx.PlayWaveStart();
 
                 while (_alive > 0 && _session.State == SessionState.Playing)
                 {
@@ -190,8 +169,13 @@ namespace ShikiShiro
                 }
 
                 _session.NotifyWaveClear();
-                _hud.Announce("エリア確保");
-                yield return new WaitForSeconds(4.5f);
+                _hud.ShowWaveClear(wave);
+                _sfx.PlayWaveClear();
+                if (_player != null)
+                {
+                    _fx.WaveClearBurst(_player.position);
+                }
+                yield return new WaitForSeconds(3.6f);
                 if (_session.State == SessionState.GameOver)
                 {
                     yield break;
@@ -201,47 +185,71 @@ namespace ShikiShiro
             }
         }
 
-        private IEnumerator SpawnPack(int count, int wave)
+        private IEnumerator WaveCountdown(int wave)
         {
-            Vector3 anchor = PickPackAnchor();
-            for (int i = 0; i < count; i++)
+            for (int n = 3; n >= 1; n--)
             {
-                if (_session.State != SessionState.Playing)
+                if (_session.State == SessionState.GameOver)
                 {
+                    _hud.HideCountdown();
                     yield break;
                 }
 
-                Vector3 pos = PlaceAround(anchor, 0.6f, 2.4f);
+                _hud.ShowCountdown(n, wave);
+                _sfx.PlayCountdownTick(n);
+                yield return new WaitForSeconds(1f);
+            }
+
+            _hud.HideCountdown();
+        }
+
+        private void ResetPlayerToStart()
+        {
+            if (_player == null)
+            {
+                return;
+            }
+
+            var motor = _player.GetComponent<PlayerMotor>();
+            if (motor != null)
+            {
+                motor.ResetToSpawn();
+            }
+            else
+            {
+                _player.SetPositionAndRotation(_arena.SpawnPoint, Quaternion.identity);
+            }
+        }
+
+        private int WaveSize(int wave)
+        {
+            int size = 16 + wave * 8;
+            int cap = _config != null ? _config.ZombiePoolSize : 96;
+            return Mathf.Min(size, cap);
+        }
+
+        private void SpawnWave(int count, int wave)
+        {
+            Vector3 spawn = _arena.SpawnPoint;
+            float minR = 20f;
+            float maxR = Mathf.Min(_arena.PlayHalf * 0.82f, 40f);
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (i / (float)count) * 360f + Random.Range(-12f, 12f);
+                Vector3 ring = spawn + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(minR, maxR);
+                Vector3 pos = PlaceAround(ring, 0.4f, 2.8f, spawn, 18f);
                 ZombieAgent zombie = _zombies.Get();
                 zombie.Spawn(SelectKind(wave), pos, _player, _session, _fx, _sfx, this);
                 _alive++;
-                _remainingToSpawn--;
-                yield return new WaitForSeconds(0.05f);
             }
         }
 
-        private Vector3 PickPackAnchor()
-        {
-            Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
-            float angle;
-            int guard = 0;
-            do
-            {
-                angle = Random.Range(0f, 360f);
-                guard++;
-            }
-            while (guard < 12 && Mathf.Abs(Mathf.DeltaAngle(_lastPackAngle, angle)) < 70f);
-
-            _lastPackAngle = angle;
-            Vector3 raw = origin + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(14f, 24f);
-            return PlaceAround(raw, 0f, 1.2f);
-        }
-
-        private Vector3 PlaceAround(Vector3 center, float minJitter, float maxJitter)
+        private Vector3 PlaceAround(Vector3 center, float minJitter, float maxJitter, Vector3 keepAway, float minKeepAway)
         {
             int mask = LayerMask.GetMask("Obstacle", "Ground");
-            Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
-            for (int i = 0; i < 20; i++)
+            float minSqr = minKeepAway * minKeepAway;
+            Vector3 heightRef = _arena.SpawnPoint;
+            for (int i = 0; i < 24; i++)
             {
                 Vector2 jitter = Random.insideUnitCircle * Random.Range(minJitter, maxJitter);
                 Vector3 p = center + new Vector3(jitter.x, 0f, jitter.y);
@@ -252,7 +260,7 @@ namespace ShikiShiro
                 }
                 else
                 {
-                    p.y = origin.y;
+                    p.y = heightRef.y;
                 }
 
                 if (!_arena.IsStreet(p))
@@ -260,13 +268,13 @@ namespace ShikiShiro
                     p = _arena.SnapToStreet(p);
                 }
 
-                if (Mathf.Abs(p.y - origin.y) > 2.5f)
+                if (Mathf.Abs(p.y - heightRef.y) > 2.5f)
                 {
                     continue;
                 }
 
-                Vector2 fromPlayer = new Vector2(p.x - origin.x, p.z - origin.z);
-                if (fromPlayer.sqrMagnitude < 11f * 11f)
+                Vector2 away = new Vector2(p.x - keepAway.x, p.z - keepAway.z);
+                if (away.sqrMagnitude < minSqr)
                 {
                     continue;
                 }
@@ -285,20 +293,26 @@ namespace ShikiShiro
             }
 
             int obstacle = LayerMask.GetMask("Obstacle");
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 10; i++)
             {
-                Vector3 fallback = _arena.SnapToStreet(origin + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(12f, 22f));
-                fallback.y = origin.y;
+                Vector3 fallback = _arena.SnapToStreet(_arena.SpawnPoint + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(22f, 36f));
+                fallback.y = heightRef.y;
                 fallback = _arena.ClampInside(fallback, 2.2f);
+                Vector2 away = new Vector2(fallback.x - keepAway.x, fallback.z - keepAway.z);
+                if (away.sqrMagnitude < minSqr)
+                {
+                    continue;
+                }
+
                 if (!Physics.CheckCapsule(fallback + Vector3.up * 0.6f, fallback + Vector3.up * 1.6f, 0.4f, obstacle, QueryTriggerInteraction.Ignore))
                 {
                     return fallback;
                 }
             }
 
-            Vector3 safe = _arena.SnapToStreet(_arena.SpawnPoint + Vector3.back * 8f);
-            safe.y = origin.y;
-            return safe;
+            Vector3 safe = _arena.SnapToStreet(_arena.SpawnPoint + Vector3.forward * 24f);
+            safe.y = heightRef.y;
+            return _arena.ClampInside(safe, 2.2f);
         }
 
         private static ZombieKind SelectKind(int wave)

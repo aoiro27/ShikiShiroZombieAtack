@@ -20,8 +20,12 @@ namespace ShikiShiro
         private Text _wave;
         private Text _score;
         private Text _announce;
+        private Text _announceSub;
         private Text _gameOver;
+        private Image _clearFlash;
         private float _announceUntil;
+        private float _announcePunch = 1f;
+        private float _clearFlashAlpha;
         private float _flash;
         private float _biteAlpha;
         private float _biteScale;
@@ -33,7 +37,12 @@ namespace ShikiShiro
         private GameSession _session;
         private GameInput _input;
         private CanvasGroup _pauseGroup;
+        private GameObject _countdownRoot;
+        private Text _countdownWave;
+        private Text _countdownNumber;
+        private float _countdownPunch = 1f;
         private MinimapHud _minimap;
+        private HitPopupHud _hitPopups;
         private bool _paused;
 
         public VirtualJoystick MoveStick { get; private set; }
@@ -50,8 +59,10 @@ namespace ShikiShiro
             vitality.HealthChanged += OnHealth;
             vitality.Damaged += OnDamaged;
             weapons.MagazineChanged += RefreshAmmo;
-            session.ScoreChanged += _ => RefreshScore();
-            session.WaveChanged += _ => RefreshWave();
+            session.ScoreChanged += OnScoreChanged;
+            session.ComboChanged += OnScoreChanged;
+            session.HitPopup += OnHitPopup;
+            session.WaveChanged += OnWaveChanged;
             session.StateChanged += OnState;
             OnHealth(vitality.CurrentHealth, vitality.MaxHealth);
             RefreshAmmo();
@@ -67,9 +78,18 @@ namespace ShikiShiro
                 _vitality.Damaged -= OnDamaged;
             }
 
+            if (_weapons != null)
+            {
+                _weapons.MagazineChanged -= RefreshAmmo;
+            }
+
             if (_session != null)
             {
+                _session.ScoreChanged -= OnScoreChanged;
+                _session.ComboChanged -= OnScoreChanged;
+                _session.WaveChanged -= OnWaveChanged;
                 _session.StateChanged -= OnState;
+                _session.HitPopup -= OnHitPopup;
             }
         }
 
@@ -83,8 +103,66 @@ namespace ShikiShiro
 
         public void Announce(string text)
         {
-            _announce.text = text;
-            _announceUntil = Time.unscaledTime + 2.2f;
+            ShowBanner(text, string.Empty, new Color(1f, 0.82f, 0.45f), 54, 2.2f, 1.12f, 0f);
+        }
+
+        public void ShowWaveClear(int wave)
+        {
+            ShowBanner($"WAVE {wave}  CLEAR", "エリア確保", new Color(1f, 0.88f, 0.38f), 72, 3.5f, 1.38f, 0.55f);
+        }
+
+        public void ShowWaveStart(int wave)
+        {
+            ShowBanner($"WAVE {wave}", "接近中", new Color(1f, 0.45f, 0.22f), 64, 2.4f, 1.22f, 0.18f);
+        }
+
+        public void ShowCountdown(int seconds, int wave)
+        {
+            if (_countdownRoot == null)
+            {
+                return;
+            }
+
+            _announceUntil = 0f;
+            if (_announce != null)
+            {
+                _announce.text = string.Empty;
+            }
+
+            if (_announceSub != null)
+            {
+                _announceSub.text = string.Empty;
+            }
+
+            _countdownRoot.SetActive(true);
+            _countdownWave.text = $"WAVE {wave}";
+            _countdownNumber.text = seconds.ToString();
+            _countdownPunch = 1.42f;
+            _countdownNumber.rectTransform.localScale = Vector3.one * _countdownPunch;
+        }
+
+        public void HideCountdown()
+        {
+            if (_countdownRoot != null)
+            {
+                _countdownRoot.SetActive(false);
+            }
+        }
+
+        private void ShowBanner(string title, string sub, Color color, int size, float seconds, float punch, float flash)
+        {
+            _announce.text = title;
+            _announce.fontSize = size;
+            _announce.color = color;
+            _announcePunch = punch;
+            if (_announceSub != null)
+            {
+                _announceSub.text = sub;
+                _announceSub.color = new Color(color.r, color.g, color.b, 0.9f);
+            }
+
+            _clearFlashAlpha = flash;
+            _announceUntil = Time.unscaledTime + seconds;
         }
 
         private void Update()
@@ -92,10 +170,34 @@ namespace ShikiShiro
             if (_announceUntil > 0f && Time.unscaledTime > _announceUntil)
             {
                 _announce.text = string.Empty;
+                if (_announceSub != null)
+                {
+                    _announceSub.text = string.Empty;
+                }
+
                 _announceUntil = 0f;
             }
 
-            if (_input != null && _input.PausePressed && _session.State == SessionState.Playing)
+            float udt = Time.unscaledDeltaTime;
+            _announcePunch = Mathf.MoveTowards(_announcePunch, 1f, udt * 2.6f);
+            if (_announce != null)
+            {
+                _announce.rectTransform.localScale = Vector3.one * _announcePunch;
+            }
+
+            _clearFlashAlpha = Mathf.MoveTowards(_clearFlashAlpha, 0f, udt * 1.15f);
+            if (_clearFlash != null)
+            {
+                _clearFlash.color = new Color(1f, 0.86f, 0.35f, _clearFlashAlpha);
+            }
+
+            _countdownPunch = Mathf.MoveTowards(_countdownPunch, 1f, udt * 2.4f);
+            if (_countdownNumber != null)
+            {
+                _countdownNumber.rectTransform.localScale = Vector3.one * _countdownPunch;
+            }
+
+            if (_input != null && _input.PausePressed && CanPause(_session.State))
             {
                 TogglePause();
             }
@@ -278,6 +380,21 @@ namespace ShikiShiro
             }
         }
 
+        private void OnHitPopup(HitPopupInfo info)
+        {
+            _hitPopups?.Spawn(info);
+        }
+
+        private void OnScoreChanged(int _)
+        {
+            RefreshScore();
+        }
+
+        private void OnWaveChanged(int _)
+        {
+            RefreshWave();
+        }
+
         private void RefreshScore()
         {
             string combo = _session.Combo > 1 ? $"  COMBO x{_session.Combo}" : string.Empty;
@@ -295,6 +412,7 @@ namespace ShikiShiro
             {
                 Time.timeScale = 0f;
                 _paused = false;
+                HideCountdown();
                 if (_pauseGroup != null)
                 {
                     _pauseGroup.alpha = 0f;
@@ -304,6 +422,11 @@ namespace ShikiShiro
                 _gameOver.gameObject.SetActive(true);
                 _gameOver.text = $"GAME OVER\nWAVE {_session.Wave}   KILLS {_session.Kills}\nSCORE {_session.Score}\nタップ / クリックで再開";
             }
+        }
+
+        private static bool CanPause(SessionState state)
+        {
+            return state == SessionState.Playing || state == SessionState.Countdown || state == SessionState.WaveClear;
         }
 
         public void TryRestart()
@@ -377,12 +500,28 @@ namespace ShikiShiro
             _wave = CreateHudPlate(safeGo.transform, "Wave", new Vector2(0, -24), new Vector2(280, 78), new Vector2(0.5f, 1f), TextAnchor.MiddleCenter);
             _score = CreateHudPlate(safeGo.transform, "Score", new Vector2(-320, -24), new Vector2(360, 96), new Vector2(1f, 1f), TextAnchor.MiddleRight);
 
-            _announce = CreateText(safeGo.transform, "Announce", Vector2.zero, new Vector2(900, 120), 54, TextAnchor.MiddleCenter);
+            _announce = CreateText(safeGo.transform, "Announce", Vector2.zero, new Vector2(1200, 140), 54, TextAnchor.MiddleCenter);
             var anRt = _announce.rectTransform;
-            anRt.anchorMin = new Vector2(0.5f, 0.62f);
-            anRt.anchorMax = new Vector2(0.5f, 0.62f);
+            anRt.anchorMin = new Vector2(0.5f, 0.64f);
+            anRt.anchorMax = new Vector2(0.5f, 0.64f);
             anRt.pivot = new Vector2(0.5f, 0.5f);
             _announce.color = new Color(1f, 0.82f, 0.45f);
+            _announce.fontStyle = FontStyle.Bold;
+
+            _announceSub = CreateText(safeGo.transform, "AnnounceSub", Vector2.zero, new Vector2(900, 64), 32, TextAnchor.MiddleCenter);
+            var subRt = _announceSub.rectTransform;
+            subRt.anchorMin = new Vector2(0.5f, 0.56f);
+            subRt.anchorMax = new Vector2(0.5f, 0.56f);
+            subRt.pivot = new Vector2(0.5f, 0.5f);
+            _announceSub.color = new Color(1f, 0.9f, 0.6f, 0.9f);
+
+            _clearFlash = CreatePanel(safeGo.transform, "ClearFlash", new Color(1f, 0.86f, 0.35f, 0f)).GetComponent<Image>();
+            var flashRt = _clearFlash.rectTransform;
+            flashRt.anchorMin = Vector2.zero;
+            flashRt.anchorMax = Vector2.one;
+            flashRt.offsetMin = Vector2.zero;
+            flashRt.offsetMax = Vector2.zero;
+            _clearFlash.raycastTarget = false;
 
             _gameOver = CreateText(safeGo.transform, "GameOver", Vector2.zero, new Vector2(1100, 420), 44, TextAnchor.MiddleCenter);
             var goRt = _gameOver.rectTransform;
@@ -456,7 +595,7 @@ namespace ShikiShiro
 
             var pause = CreateIconButton(safeGo.transform, new Vector2(-72, -28), "PAUSE", UiSprites.Pause, new Vector2(88, 88), () =>
             {
-                if (_session.State == SessionState.Playing)
+                if (CanPause(_session.State))
                 {
                     TogglePause();
                 }
@@ -469,6 +608,8 @@ namespace ShikiShiro
             pauseRt.anchorMin = pauseRt.anchorMax = pauseRt.pivot = new Vector2(1f, 1f);
 
             _minimap = MinimapHud.Create(safeGo.transform);
+            Camera cam = _camera != null ? _camera.UnityCamera : Camera.main;
+            _hitPopups = HitPopupHud.Create(safeGo.transform.parent, cam);
             Transform crosshair = safeGo.transform.Find("Crosshair");
             if (crosshair != null)
             {
@@ -505,7 +646,37 @@ namespace ShikiShiro
             }
 
             pausePanel.transform.SetAsLastSibling();
+            BuildCountdown(safeGo.transform);
             _gameOver.transform.SetAsLastSibling();
+        }
+
+        private void BuildCountdown(Transform parent)
+        {
+            var root = CreatePanel(parent, "Countdown", new Color(0.02f, 0.02f, 0.04f, 0.72f));
+            var rt = root.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var dim = root.GetComponent<Image>();
+            dim.raycastTarget = false;
+            _countdownRoot = root;
+
+            _countdownWave = CreateText(root.transform, "CountdownWave", Vector2.zero, new Vector2(1400f, 140f), 72, TextAnchor.MiddleCenter);
+            var waveRt = _countdownWave.rectTransform;
+            waveRt.anchorMin = waveRt.anchorMax = waveRt.pivot = new Vector2(0.5f, 0.72f);
+            waveRt.anchoredPosition = Vector2.zero;
+            _countdownWave.fontStyle = FontStyle.Bold;
+            _countdownWave.color = new Color(1f, 0.86f, 0.42f);
+
+            _countdownNumber = CreateText(root.transform, "CountdownNumber", Vector2.zero, new Vector2(1600f, 720f), 420, TextAnchor.MiddleCenter);
+            var numRt = _countdownNumber.rectTransform;
+            numRt.anchorMin = numRt.anchorMax = numRt.pivot = new Vector2(0.5f, 0.46f);
+            numRt.anchoredPosition = Vector2.zero;
+            _countdownNumber.fontStyle = FontStyle.Bold;
+            _countdownNumber.color = Color.white;
+
+            root.SetActive(false);
         }
 
         private void CreateWeaponRack(Transform parent)

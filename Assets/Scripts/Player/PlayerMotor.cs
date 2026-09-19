@@ -94,8 +94,8 @@ namespace ShikiShiro
             if (gyro.sqrMagnitude > 0.0001f)
             {
                 float g = _config.GyroLookSensitivity;
-                Yaw += gyro.x * g * Time.deltaTime;
-                Pitch += gyro.y * g * Time.deltaTime;
+                Yaw += gyro.x * g;
+                Pitch += gyro.y * g;
             }
             else if (look.sqrMagnitude <= 0.0001f)
             {
@@ -126,6 +126,29 @@ namespace ShikiShiro
             Vector3 velocity = planar * speed + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
             ConstrainToArena();
+        }
+
+        public void ResetToSpawn()
+        {
+            if (_arena == null)
+            {
+                return;
+            }
+
+            if (_controller != null)
+            {
+                _controller.enabled = false;
+            }
+
+            transform.SetPositionAndRotation(_arena.SpawnPoint, Quaternion.identity);
+            Yaw = 0f;
+            Pitch = 12f;
+            _recoilPitch = 0f;
+            _verticalVelocity = -2f;
+            if (_controller != null)
+            {
+                _controller.enabled = true;
+            }
         }
 
         private void ConstrainToArena()

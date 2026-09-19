@@ -28,10 +28,10 @@ namespace ShikiShiro
         private Vector3[] _hipPos;
         private Vector3[] _hipEuler;
         private float _kick;
-        private int _zombieMask;
-        private int _obstacleMask;
-        private int _groundMask;
-        private readonly RaycastHit[] _hits = new RaycastHit[24];
+        private int _hurtMask;
+        private int _blockMask;
+        private readonly RaycastHit[] _hurtHits = new RaycastHit[16];
+        private readonly IDamageable[] _shotVictims = new IDamageable[8];
         private GameObject[] _gunVisuals;
         private Animator[] _gunAnimators;
         private Camera _viewCam;
@@ -59,7 +59,8 @@ namespace ShikiShiro
             _camera = camera;
             _fx = fx;
             _sfx = sfx;
-            _zombieMask = LayerMask.GetMask("Zombie", "Obstacle", "Ground", "Default");
+            _hurtMask = LayerMask.GetMask("Zombie");
+            _blockMask = LayerMask.GetMask("Obstacle", "Ground", "Default");
             BuildGunVisual();
             Equip(0);
         }
@@ -158,6 +159,9 @@ namespace ShikiShiro
             Camera cam = _camera.UnityCamera;
             Vector3 origin = cam.transform.position;
             Vector3 center = cam.transform.forward;
+            bool thick = Current.Pellets <= 1;
+            int victimCount = 0;
+            int wallFx = 0;
             for (int i = 0; i < Current.Pellets; i++)
             {
                 Vector3 dir = Quaternion.Euler(
@@ -165,25 +169,144 @@ namespace ShikiShiro
                     UnityEngine.Random.Range(-Current.SpreadDegrees, Current.SpreadDegrees),
                     0f) * center;
 
-                if (!Physics.Raycast(origin, dir, out RaycastHit hit, Current.Range, _zombieMask, QueryTriggerInteraction.Ignore))
+                if (!TryHit(origin, dir, Current.Range, thick, out RaycastHit hit, out IDamageable damageable))
                 {
-                    _fx.Tracer(muzzlePos, origin + dir * Mathf.Min(Current.Range, 40f));
+                    if (i < 3)
+                    {
+                        _fx.Tracer(muzzlePos, origin + dir * Mathf.Min(Current.Range, 28f));
+                    }
+
                     continue;
                 }
 
-                _fx.Tracer(muzzlePos, hit.point);
-                var damageable = hit.collider.GetComponentInParent<IDamageable>();
+                if (i < 5)
+                {
+                    _fx.Tracer(muzzlePos, hit.point);
+                }
+
                 if (damageable == null || !damageable.IsAlive)
                 {
-                    _fx.Impact(hit.point, hit.normal);
-                    _sfx.PlayImpact();
+                    if (wallFx < 2)
+                    {
+                        _fx.Impact(hit.point, hit.normal);
+                        if (wallFx == 0)
+                        {
+                            _sfx.PlayImpact();
+                        }
+
+                        wallFx++;
+                    }
+
                     continue;
+                }
+
+                if (AlreadyHit(damageable, victimCount))
+                {
+                    continue;
+                }
+
+                if (victimCount < _shotVictims.Length)
+                {
+                    _shotVictims[victimCount++] = damageable;
                 }
 
                 bool headshot = hit.point.y - hit.collider.bounds.min.y > hit.collider.bounds.size.y * 0.72f;
                 float amount = Current.Damage * (headshot ? 2.4f : 1f);
                 damageable.ApplyDamage(new DamageInfo(amount, hit.point, dir, headshot, Current.Id));
-                _camera.Shake(headshot ? 0.16f : 0.06f, headshot ? 0.16f : 0.08f);
+            }
+
+            if (victimCount > 0)
+            {
+                _camera.Shake(0.1f + 0.04f * victimCount, 0.12f);
+            }
+        }
+
+        private bool AlreadyHit(IDamageable hurt, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (_shotVictims[i] == hurt)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryHit(Vector3 origin, Vector3 dir, float range, bool thick, out RaycastHit hit, out IDamageable damageable)
+        {
+            hit = default;
+            damageable = null;
+            origin += dir * 0.05f;
+
+            float zombieDist = float.PositiveInfinity;
+            RaycastHit zombieHit = default;
+            IDamageable zombie = null;
+            if (_hurtMask != 0)
+            {
+                if (thick)
+                {
+                    int hurtCount = Physics.SphereCastNonAlloc(origin, 0.16f, dir, _hurtHits, range, _hurtMask, QueryTriggerInteraction.Collide);
+                    if (hurtCount <= 0)
+                    {
+                        hurtCount = Physics.RaycastNonAlloc(origin, dir, _hurtHits, range, _hurtMask, QueryTriggerInteraction.Collide);
+                    }
+
+                    for (int i = 0; i < hurtCount; i++)
+                    {
+                        ConsiderZombie(_hurtHits[i], ref zombieDist, ref zombieHit, ref zombie);
+                    }
+                }
+                else if (Physics.Raycast(origin, dir, out RaycastHit zh, range, _hurtMask, QueryTriggerInteraction.Collide))
+                {
+                    ConsiderZombie(zh, ref zombieDist, ref zombieHit, ref zombie);
+                }
+            }
+
+            float blockDist = float.PositiveInfinity;
+            RaycastHit blockHit = default;
+            if (_blockMask != 0 && Physics.Raycast(origin, dir, out RaycastHit bh, range, _blockMask, QueryTriggerInteraction.Ignore))
+            {
+                blockDist = bh.distance;
+                blockHit = bh;
+            }
+
+            const float wallSlop = 0.6f;
+            if (zombie != null && zombieDist <= blockDist + wallSlop)
+            {
+                hit = zombieHit;
+                damageable = zombie;
+                return true;
+            }
+
+            if (blockDist < float.PositiveInfinity)
+            {
+                hit = blockHit;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void ConsiderZombie(RaycastHit candidate, ref float zombieDist, ref RaycastHit zombieHit, ref IDamageable zombie)
+        {
+            if (candidate.collider == null)
+            {
+                return;
+            }
+
+            var hurt = candidate.collider.GetComponentInParent<IDamageable>();
+            if (hurt == null || !hurt.IsAlive || hurt is PlayerVitality)
+            {
+                return;
+            }
+
+            if (candidate.distance < zombieDist)
+            {
+                zombieDist = candidate.distance;
+                zombieHit = candidate;
+                zombie = hurt;
             }
         }
 

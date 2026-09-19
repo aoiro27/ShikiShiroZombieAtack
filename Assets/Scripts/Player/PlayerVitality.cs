@@ -44,6 +44,7 @@ namespace ShikiShiro
 
             CurrentHealth = Mathf.Max(0f, CurrentHealth - info.Amount);
             _invuln = 0.35f;
+            _session?.BreakCombo();
             HealthChanged?.Invoke(CurrentHealth, MaxHealth);
             Damaged?.Invoke(info);
             Handheld.Vibrate();

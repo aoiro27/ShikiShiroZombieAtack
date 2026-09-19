@@ -35,6 +35,7 @@ namespace ShikiShiro
         private ZombieBodyMotion _motion;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _flashBlock;
+        private CapsuleCollider _hurtbox;
         private GameObject _walkerVisual;
         private GameObject _runnerVisual;
         private GameObject _bruteVisual;
@@ -42,9 +43,9 @@ namespace ShikiShiro
         public void BuildVisual()
         {
             _controller = gameObject.AddComponent<CharacterController>();
-            _controller.height = 1.8f;
-            _controller.radius = 0.38f;
-            _controller.center = new Vector3(0f, 0.9f, 0f);
+            _controller.height = 1.9f;
+            _controller.radius = 0.45f;
+            _controller.center = new Vector3(0f, 0.95f, 0f);
             _controller.minMoveDistance = 0f;
             int zombieLayer = LayerMask.NameToLayer("Zombie");
             gameObject.layer = zombieLayer >= 0 ? zombieLayer : 0;
@@ -59,7 +60,30 @@ namespace ShikiShiro
             _visual = new GameObject("Visual").transform;
             _visual.SetParent(transform, false);
             _motion = new ZombieBodyMotion();
+            EnsureHurtbox();
             GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
+        }
+
+        private void EnsureHurtbox()
+        {
+            Transform existing = transform.Find("Hurtbox");
+            GameObject go = existing != null ? existing.gameObject : new GameObject("Hurtbox");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+            go.layer = gameObject.layer;
+            _hurtbox = go.GetComponent<CapsuleCollider>();
+            if (_hurtbox == null)
+            {
+                _hurtbox = go.AddComponent<CapsuleCollider>();
+            }
+
+            _hurtbox.isTrigger = true;
+            _hurtbox.direction = 1;
+            _hurtbox.height = 2.15f;
+            _hurtbox.radius = 0.62f;
+            _hurtbox.center = new Vector3(0f, 1.05f, 0f);
         }
 
         public void Spawn(ZombieKind kind, Vector3 position, Transform target, GameSession session, CombatFx fx, ProceduralSfx sfx, HordeDirector horde)
@@ -128,6 +152,11 @@ namespace ShikiShiro
             if (_health <= 0f)
             {
                 Die(info);
+            }
+            else if (info.ChainDepth == 0)
+            {
+                int gained = _session.RegisterCombatHit(Kind, info.IsHeadshot, false);
+                _session.NotifyHitPopup(new HitPopupInfo(info.Point, gained, _session.Combo, info.IsHeadshot, false));
             }
         }
 
@@ -342,12 +371,9 @@ namespace ShikiShiro
                 _sfx.PlayBoom();
                 _fx.KillPunch(scale);
             }
-            else
-            {
-                _sfx.PlayBoom();
-            }
 
-            _session.RegisterKill(Kind, info.IsHeadshot);
+            int gained = _session.RegisterCombatHit(Kind, info.IsHeadshot, true);
+            _session.NotifyHitPopup(new HitPopupInfo(info.Point, gained, _session.Combo, info.IsHeadshot, true));
             _horde.NotifyKilled(this);
             _horde.ChainBurst(this, info);
             if (info.ChainDepth == 0 && Random.value < 0.1f)

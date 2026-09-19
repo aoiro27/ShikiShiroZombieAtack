@@ -22,6 +22,8 @@ namespace ShikiShiro
         private ParticleSystem _explodeShock;
         private ParticleSystem _explodeGibs;
         private ParticleSystem _explodeEmbers;
+        private ParticleSystem _clearSparks;
+        private ParticleSystem _clearGlow;
         private Coroutine _hitstop;
         private Light _muzzleLight;
         private Light _hitLight;
@@ -30,6 +32,8 @@ namespace ShikiShiro
         private float _hitPeak;
         private Texture2D _glow;
         private int _cursor;
+        private int _boomFrame = -1;
+        private int _boomsThisFrame;
 
         private struct TracerGhost
         {
@@ -88,6 +92,13 @@ namespace ShikiShiro
             emberR.lengthScale = 3.6f;
             emberR.velocityScale = 0.2f;
             ConfigureBurst(_explodeEmbers, cone: 85f, speed: 18f, size: 0.07f, life: 0.38f, gravity: 1.2f, new Color(1f, 0.55f, 0.12f, 1f));
+            _clearSparks = BuildParticles(root, "ClearSparks", additive, 160, ParticleSystemRenderMode.Stretch);
+            var clearR = _clearSparks.GetComponent<ParticleSystemRenderer>();
+            clearR.lengthScale = 2.2f;
+            clearR.velocityScale = 0.12f;
+            ConfigureBurst(_clearSparks, cone: 18f, speed: 9f, size: 0.06f, life: 0.7f, gravity: -0.6f, new Color(1f, 0.86f, 0.35f, 1f));
+            _clearGlow = BuildParticles(root, "ClearGlow", additive, 24, ParticleSystemRenderMode.Billboard);
+            ConfigureBurst(_clearGlow, cone: 0f, speed: 0.2f, size: 2.8f, life: 0.22f, gravity: 0f, new Color(1f, 0.92f, 0.55f, 1f));
 
             var hitLightGo = new GameObject("HitLight");
             hitLightGo.transform.SetParent(root, false);
@@ -144,10 +155,6 @@ namespace ShikiShiro
             Emit(_blood, point, rot, headshot ? 36 : 22);
             Emit(_bloodMist, point, rot, headshot ? 18 : 10);
             PulseHitLight(point, new Color(0.7f, 0.05f, 0.02f), headshot ? 8f : 4.5f, 0.09f);
-            if (headshot)
-            {
-                Explosion(point, dir);
-            }
         }
 
         public void PlayerWound(Vector3 point, Vector3 incoming)
@@ -164,34 +171,56 @@ namespace ShikiShiro
 
         public void Explosion(Vector3 point, Vector3 direction, float scale = 1f)
         {
+            int frame = Time.frameCount;
+            if (frame != _boomFrame)
+            {
+                _boomFrame = frame;
+                _boomsThisFrame = 0;
+            }
+
+            _boomsThisFrame++;
             float s = Mathf.Max(0.5f, scale);
             Quaternion rot = Quaternion.LookRotation(direction.sqrMagnitude > 0.01f ? direction : Vector3.up);
-            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(8f * s));
-            Emit(_explodeShock, point, Quaternion.identity, 2);
-            Emit(_explodeFire, point, rot, Mathf.RoundToInt(90f * s));
-            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(36f * s));
-            Emit(_explodeEmbers, point, rot, Mathf.RoundToInt(70f * s));
-            Emit(_explodeGibs, point, rot, Mathf.RoundToInt(48f * s));
-            Emit(_blood, point, rot, Mathf.RoundToInt(28f * s));
-            Emit(_bloodMist, point, rot, Mathf.RoundToInt(16f * s));
-            Emit(_sparks, point, rot, Mathf.RoundToInt(64f * s));
-            PulseHitLight(point, new Color(1f, 0.48f, 0.1f), 22f * s, 0.22f);
+            if (_boomsThisFrame > 2)
+            {
+                Emit(_explodeFlash, point, rot, 2);
+                Emit(_explodeFire, point, rot, 10);
+                Emit(_explodeSmoke, point, rot, 6);
+                return;
+            }
+
+            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(4f * s));
+            Emit(_explodeShock, point, Quaternion.identity, 1);
+            Emit(_explodeFire, point, rot, Mathf.RoundToInt(28f * s));
+            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(14f * s));
+            Emit(_explodeEmbers, point, rot, Mathf.RoundToInt(18f * s));
+            Emit(_explodeGibs, point, rot, Mathf.RoundToInt(12f * s));
+            Emit(_sparks, point, rot, Mathf.RoundToInt(16f * s));
+            PulseHitLight(point, new Color(1f, 0.48f, 0.1f), 12f * s, 0.16f);
         }
 
         public void KillPunch(float scale)
         {
-            if (Time.timeScale <= 0.001f)
+            if (Time.timeScale < 0.99f || _hitstop != null)
             {
                 return;
             }
-            TpsCamera cam = Camera.main != null ? Camera.main.GetComponent<TpsCamera>() : null;
-            cam?.Shake(0.32f * scale, 0.28f);
-            if (_hitstop != null)
-            {
-                StopCoroutine(_hitstop);
-            }
 
-            _hitstop = StartCoroutine(Hitstop(0.055f, 0.08f));
+            TpsCamera cam = Camera.main != null ? Camera.main.GetComponent<TpsCamera>() : null;
+            cam?.Shake(0.22f * scale, 0.18f);
+            _hitstop = StartCoroutine(Hitstop(0.04f, 0.35f));
+        }
+
+        public void WaveClearBurst(Vector3 point)
+        {
+            Vector3 origin = point + Vector3.up * 1.1f;
+            Quaternion up = Quaternion.LookRotation(Vector3.up);
+            Emit(_clearGlow, origin, Quaternion.identity, 4);
+            Emit(_clearSparks, origin, up, 70);
+            Emit(_explodeShock, origin, Quaternion.identity, 2);
+            PulseHitLight(origin, new Color(1f, 0.84f, 0.35f), 16f, 0.35f);
+            TpsCamera cam = Camera.main != null ? Camera.main.GetComponent<TpsCamera>() : null;
+            cam?.Shake(0.1f, 0.32f);
         }
 
         public void Tracer(Vector3 from, Vector3 to)

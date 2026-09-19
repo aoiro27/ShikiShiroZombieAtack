@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: fb936ae7b954b48f4aa6fb88ba08218a
+timeCreated: 1450517184
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 144839
+  packageName: Low Poly Shooter Pack - Free Sample
+  packageVersion: 2.0.0
+  assetPath: Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Art/TextMesh Pro/Resources/Shaders/TMP_Sprite.shader
+  uploadId: 469425

@@ -9,10 +9,10 @@ namespace ShikiShiro
     {
         public const string Player = "Quaternius/Player/Characters_Matt";
         public const string ZombieAtlas = "Quaternius/Zombie_Atlas";
-        public const string ZombieAnimator = "Assets/Supercyan Character Pack Zombie Sample/AnimatorControllers/FreeZombieController.controller";
-        public const string ZombieWalker = "Assets/NewPunch/ShirtlessZombieFree/Prefabs/ShirtlessZombie_FREE.prefab";
-        public const string ZombieRunner = "Assets/ZombieMale_AAB/Prefabs/ZombieMale_AAB.prefab";
-        public const string ZombieBrute = "Assets/Supercyan Character Pack Zombie Sample/Prefabs/Base/High Quality/FreeZombie.prefab";
+        public const string ZombieAnimator = "Characters/FreeZombieController";
+        public const string ZombieWalker = "Characters/ShirtlessZombie_FREE";
+        public const string ZombieRunner = "Characters/ZombieMale_AAB";
+        public const string ZombieBrute = "Characters/FreeZombie";
 
         public const string Pistol = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string Smg = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
@@ -52,7 +52,7 @@ namespace ShikiShiro
             GameObject go = Object.Instantiate(prefab, parent, false);
             go.name = prefab.name;
             StripRuntimeJunk(go);
-            if (!IsProjectAsset(path))
+            if (!KeepsAuthoredLook(path))
             {
                 FixImportScale(go);
             }
@@ -94,7 +94,7 @@ namespace ShikiShiro
             GameObject visual = TryInstantiate(modelPath, parent);
             if (visual == null)
             {
-                return null;
+                visual = CreateFallbackCharacter(parent);
             }
 
             visual.transform.localPosition = Vector3.zero;
@@ -102,7 +102,7 @@ namespace ShikiShiro
             EnsureHeight(visual, 1.8f);
             DisableColliders(visual);
             RepairBrokenShaders(visual);
-            if (!IsProjectAsset(modelPath))
+            if (!KeepsAuthoredLook(modelPath))
             {
                 ApplyMainTexture(visual, Load<Texture2D>(texturePath));
             }
@@ -139,7 +139,7 @@ namespace ShikiShiro
 
             Vector3 size = bounds.size;
             float mag = Mathf.Max(size.x, size.y, size.z);
-            if (mag > 0.0001f && mag < 0.5f)
+            if (!KeepsAuthoredLook(path) && mag > 0.0001f && mag < 0.5f)
             {
                 size *= 100f;
             }
@@ -548,6 +548,27 @@ namespace ShikiShiro
                 renderer.lightmapIndex = -1;
                 renderer.realtimeLightmapIndex = -1;
             }
+        }
+
+        private static GameObject CreateFallbackCharacter(Transform parent)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "FallbackBody";
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            go.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.32f, 0.42f, 0.18f), 0.04f, 0.18f);
+            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            head.name = "FallbackHead";
+            head.transform.SetParent(go.transform, false);
+            head.transform.localPosition = new Vector3(0f, 0.55f, 0.08f);
+            head.transform.localScale = new Vector3(0.72f, 0.72f, 0.72f);
+            head.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.45f, 0.38f, 0.28f), 0.04f, 0.22f);
+            return go;
+        }
+
+        private static bool KeepsAuthoredLook(string path)
+        {
+            return IsProjectAsset(path) || (!string.IsNullOrEmpty(path) && path.StartsWith("Characters/"));
         }
 
         private static bool IsProjectAsset(string path)

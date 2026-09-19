@@ -5,6 +5,7 @@ namespace ShikiShiro
     public enum SessionState
     {
         Boot,
+        Countdown,
         Playing,
         WaveClear,
         GameOver
@@ -51,6 +52,24 @@ namespace ShikiShiro
         }
     }
 
+    public readonly struct HitPopupInfo
+    {
+        public readonly Vector3 WorldPoint;
+        public readonly int Score;
+        public readonly int Combo;
+        public readonly bool Headshot;
+        public readonly bool Kill;
+
+        public HitPopupInfo(Vector3 worldPoint, int score, int combo, bool headshot, bool kill)
+        {
+            WorldPoint = worldPoint;
+            Score = score;
+            Combo = combo;
+            Headshot = headshot;
+            Kill = kill;
+        }
+    }
+
     public interface IDamageable
     {
         bool IsAlive { get; }
@@ -63,7 +82,7 @@ namespace ShikiShiro
         public float PlayerMoveSpeed = 6.6f;
         public float PlayerSprintMultiplier = 1.5f;
         public float PlayerLookSensitivity = 110f;
-        public float GyroLookSensitivity = 1f;
+        public float GyroLookSensitivity = 1.85f;
         public float EditorLookSensitivity = 0.18f;
         public float PlayerMaxHealth = 100f;
         public float CameraDistance = 3.6f;
