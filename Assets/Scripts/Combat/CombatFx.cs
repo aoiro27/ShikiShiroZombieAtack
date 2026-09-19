@@ -65,11 +65,11 @@ namespace ShikiShiro
             ConfigureBurst(_bloodSpray, cone: 28f, speed: 14f, size: 0.05f, life: 0.32f, gravity: 1.8f, new Color(0.7f, 0.0f, 0.0f, 1f));
             _bloodMist = BuildParticles(root, "BloodMist", alpha, 64, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_bloodMist, cone: 70f, speed: 2.2f, size: 0.35f, life: 0.7f, gravity: 0.4f, new Color(0.35f, 0.0f, 0.0f, 0.55f));
-            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 80, ParticleSystemRenderMode.Billboard);
+            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 120, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeFire, cone: 80f, speed: 8f, size: 0.28f, life: 0.28f, gravity: -0.4f, new Color(1f, 0.45f, 0.08f, 1f));
-            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 12, ParticleSystemRenderMode.Billboard);
+            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 24, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeFlash, cone: 0f, speed: 0.2f, size: 1.1f, life: 0.08f, gravity: 0f, new Color(1f, 0.85f, 0.4f, 1f));
-            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 48, ParticleSystemRenderMode.Billboard);
+            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 72, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeSmoke, cone: 60f, speed: 2.4f, size: 0.55f, life: 0.85f, gravity: -0.35f, new Color(0.18f, 0.12f, 0.1f, 0.6f));
 
             var hitLightGo = new GameObject("HitLight");

@@ -7,12 +7,13 @@ namespace ShikiShiro
     public sealed class HudController : MonoBehaviour
     {
         private Image _healthFill;
-        private Text _ammo;
+        private Image _hurt;
+        private Image[] _weaponIcons;
+        private Image[] _weaponFrames;
         private Text _wave;
         private Text _score;
         private Text _announce;
         private Text _gameOver;
-        private Image _hurt;
         private float _announceUntil;
         private PlayerVitality _vitality;
         private WeaponController _weapons;
@@ -107,7 +108,18 @@ namespace ShikiShiro
 
         private void RefreshAmmo()
         {
-            _ammo.text = _weapons.Current.DisplayName;
+            if (_weaponIcons == null || _weaponFrames == null || _weapons == null)
+            {
+                return;
+            }
+
+            int selected = _weapons.EquippedIndex;
+            for (int i = 0; i < _weaponIcons.Length; i++)
+            {
+                bool on = i == selected;
+                _weaponIcons[i].color = on ? Color.white : new Color(1f, 1f, 1f, 0.45f);
+                _weaponFrames[i].color = on ? new Color(1f, 0.85f, 0.2f, 0.95f) : new Color(0.12f, 0.12f, 0.14f, 0.7f);
+            }
         }
 
         private void RefreshScore()
@@ -184,7 +196,6 @@ namespace ShikiShiro
             _healthFill = CreateHealthGauge(safeGo.transform, new Vector2(24, -24), new Vector2(460, 72));
             _wave = CreateHudPlate(safeGo.transform, "Wave", new Vector2(0, -24), new Vector2(280, 78), new Vector2(0.5f, 1f), TextAnchor.MiddleCenter);
             _score = CreateHudPlate(safeGo.transform, "Score", new Vector2(-320, -24), new Vector2(360, 96), new Vector2(1f, 1f), TextAnchor.MiddleRight);
-            _ammo = CreateHudPlate(safeGo.transform, "Ammo", new Vector2(-48, 470), new Vector2(360, 100), new Vector2(1f, 0f), TextAnchor.MiddleRight);
 
             _announce = CreateText(safeGo.transform, "Announce", Vector2.zero, new Vector2(900, 120), 54, TextAnchor.MiddleCenter);
             var anRt = _announce.rectTransform;
@@ -231,7 +242,7 @@ namespace ShikiShiro
             var sprint = CreateHoldButton(safeGo.transform, new Vector2(420, 400), "SPRINT", UiSprites.Sprint, new Vector2(128, 128), _input.SetTouchSprint);
             var sprintRt = sprint.GetComponent<RectTransform>();
             sprintRt.anchorMin = sprintRt.anchorMax = sprintRt.pivot = new Vector2(0f, 0f);
-            CreateIconButton(safeGo.transform, new Vector2(-140, 430), "WEAPON", UiSprites.Weapon, new Vector2(118, 118), _input.PulseSwap);
+            CreateWeaponRack(safeGo.transform);
 
             var pause = CreateIconButton(safeGo.transform, new Vector2(-72, -28), "PAUSE", UiSprites.Pause, new Vector2(88, 88), () =>
             {
@@ -269,6 +280,48 @@ namespace ShikiShiro
             _pauseGroup.alpha = 0f;
             _pauseGroup.blocksRaycasts = false;
             pausePanel.GetComponent<Image>().raycastTarget = false;
+        }
+
+        private void CreateWeaponRack(Transform parent)
+        {
+            Sprite[] icons = { UiSprites.PistolIcon, UiSprites.SmgIcon, UiSprites.ShotgunIcon };
+            _weaponIcons = new Image[icons.Length];
+            _weaponFrames = new Image[icons.Length];
+            var rack = new GameObject("WeaponRack", typeof(RectTransform));
+            rack.transform.SetParent(parent, false);
+            var rackRt = rack.GetComponent<RectTransform>();
+            rackRt.anchorMin = rackRt.anchorMax = rackRt.pivot = new Vector2(1f, 0f);
+            rackRt.anchoredPosition = new Vector2(-36f, 420f);
+            rackRt.sizeDelta = new Vector2(520f, 110f);
+
+            for (int i = 0; i < icons.Length; i++)
+            {
+                int index = i;
+                var frame = CreateSprite(rack.transform, "WeaponSlot" + i, UiSprites.Panel, new Color(1f, 1f, 1f, 0.92f));
+                var rt = frame.GetComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
+                rt.anchoredPosition = new Vector2(-8f - i * 168f, 0f);
+                rt.sizeDelta = new Vector2(158f, 96f);
+                var frameImg = frame.GetComponent<Image>();
+                frameImg.type = Image.Type.Sliced;
+                frameImg.preserveAspect = false;
+                frameImg.raycastTarget = true;
+                _weaponFrames[i] = frameImg;
+
+                var icon = CreateSprite(frame.transform, "Icon", icons[i], Color.white);
+                var iRt = icon.GetComponent<RectTransform>();
+                iRt.anchorMin = iRt.anchorMax = iRt.pivot = new Vector2(0.5f, 0.5f);
+                iRt.anchoredPosition = Vector2.zero;
+                iRt.sizeDelta = new Vector2(140f, 72f);
+                var iconImg = icon.GetComponent<Image>();
+                iconImg.preserveAspect = true;
+                iconImg.raycastTarget = false;
+                _weaponIcons[i] = iconImg;
+
+                var button = frame.AddComponent<Button>();
+                button.transition = Selectable.Transition.None;
+                button.onClick.AddListener(() => _weapons.SelectWeapon(index));
+            }
         }
 
         private VirtualJoystick CreateJoystick(Transform parent, Vector2 anchored, string name, Vector2 size, float radius)

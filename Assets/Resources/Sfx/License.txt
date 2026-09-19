@@ -1,5 +1,17 @@
 Kenney CC0 audio (www.kenney.nl):
 
 - Impact Sounds  https://kenney.nl/assets/impact-sounds
-- Sci-fi Sounds  https://kenney.nl/assets/sci-fi-sounds
 - RPG Audio      https://kenney.nl/assets/rpg-audio
+
+OpenGameArt gunshots (CC0) — Tabasco "Gunshot Sounds"
+https://opengameart.org/content/gunshot-sounds
+Trimmed one-shots: gun_pistol_*.wav, gun_smg_*.wav, gun_shotgun_*.wav
+(source recordings: CZ-52, SKS, shotgun)
+
+OpenGameArt kill hits:
+- Zane Little Music "Fleshy Bone Break/Snap SFX" CC0
+  https://opengameart.org/content/fleshy-bone-breaksnap-sfx
+  kill_flesh_*.wav
+- will_leamon "Fleshy Fight Sounds" OGA-BY 3.0
+  https://opengameart.org/content/fleshy-fight-sounds
+  flesh_hit_*.wav

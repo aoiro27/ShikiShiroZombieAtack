@@ -10,6 +10,9 @@ namespace ShikiShiro
         public static Sprite Reload { get; private set; }
         public static Sprite Sprint { get; private set; }
         public static Sprite Weapon { get; private set; }
+        public static Sprite PistolIcon { get; private set; }
+        public static Sprite SmgIcon { get; private set; }
+        public static Sprite ShotgunIcon { get; private set; }
         public static Sprite Pause { get; private set; }
         public static Sprite Crosshair { get; private set; }
         public static Sprite Panel { get; private set; }
@@ -27,6 +30,9 @@ namespace ShikiShiro
                 Reload = MakeReload();
                 Sprint = MakeSprint();
                 Weapon = MakeWeapon();
+                PistolIcon = LoadSprite("Ui/icon_pistol") ?? MakeWeapon();
+                SmgIcon = LoadSprite("Ui/icon_smg") ?? MakeWeapon();
+                ShotgunIcon = LoadSprite("Ui/icon_shotgun") ?? MakeWeapon();
                 Pause = MakePause();
                 Crosshair = MakeCrosshair();
                 Panel = MakePanel();
@@ -89,6 +95,16 @@ namespace ShikiShiro
             return ToSprite(px, s, s);
         }
 
+        public static Sprite ForWeapon(WeaponId id)
+        {
+            return id switch
+            {
+                WeaponId.Smg => SmgIcon,
+                WeaponId.Shotgun => ShotgunIcon,
+                _ => PistolIcon
+            };
+        }
+
         private static Sprite LoadSprite(string path)
         {
             Texture2D tex = Resources.Load<Texture2D>(path);
@@ -97,7 +113,7 @@ namespace ShikiShiro
                 return null;
             }
 
-            return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
         }
 
         private static Sprite MakeFire()

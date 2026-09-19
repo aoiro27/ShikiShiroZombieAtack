@@ -7,11 +7,21 @@ Visual models (CC0, Unity-ready):
   https://github.com/KayKit-Game-Assets/KayKit-City-Builder-Bits-1.0
   Buildings, roads, cars, dumpsters, street lights, pickup crate
 
-- Kenney Impact Sounds, Sci-Fi Sounds, RPG Audio (CC0)
+- Kenney Impact Sounds, RPG Audio (CC0)
   https://kenney.nl/assets/impact-sounds
-  https://kenney.nl/assets/sci-fi-sounds
   https://kenney.nl/assets/rpg-audio
-  Guns/flesh/impact/explosion: Assets/Resources/Sfx
+  Impacts: Assets/Resources/Sfx
+
+- OpenGameArt gunshots (CC0) Tabasco
+  https://opengameart.org/content/gunshot-sounds
+  Assets/Resources/Sfx/gun_pistol_*.wav, gun_smg_*.wav, gun_shotgun_*.wav
+
+- OpenGameArt flesh kills
+  Zane Little Music wet bone breaks (CC0)
+  https://opengameart.org/content/fleshy-bone-breaksnap-sfx
+  will_leamon fleshy fight (OGA-BY 3.0)
+  https://opengameart.org/content/fleshy-fight-sounds
+  Assets/Resources/Sfx/kill_flesh_*.wav, flesh_hit_*.wav
 
 - OpenGameArt zombie voices (CC0)
   Darsycho "Zombie moans" https://opengameart.org/content/zombie-moans

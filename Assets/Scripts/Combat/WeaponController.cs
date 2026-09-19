@@ -81,6 +81,18 @@ namespace ShikiShiro
             AnimateViewmodel();
         }
 
+        public int EquippedIndex => _index;
+
+        public void SelectWeapon(int index)
+        {
+            if (_arsenal.Length == 0)
+            {
+                return;
+            }
+
+            Equip((index % _arsenal.Length + _arsenal.Length) % _arsenal.Length);
+        }
+
         private void Equip(int index)
         {
             _index = index;
@@ -198,11 +210,17 @@ namespace ShikiShiro
                 vmCam.clearFlags = CameraClearFlags.Depth;
                 vmCam.depth = _camera.UnityCamera.depth + 1f;
                 vmCam.fieldOfView = _camera.UnityCamera.fieldOfView;
-                vmCam.nearClipPlane = 0.05f;
-                vmCam.farClipPlane = 2.5f;
+                vmCam.nearClipPlane = 0.02f;
+                vmCam.farClipPlane = 8f;
                 vmCam.allowHDR = false;
                 vmCam.cullingMask = 1 << viewLayer;
                 _camera.UnityCamera.cullingMask &= ~(1 << viewLayer);
+                var vmLight = vmCamGo.AddComponent<Light>();
+                vmLight.type = LightType.Directional;
+                vmLight.color = new Color(1f, 0.97f, 0.92f);
+                vmLight.intensity = 1.15f;
+                vmLight.cullingMask = 1 << viewLayer;
+                vmLight.shadows = LightShadows.None;
             }
 
             _hipPos = new[]
@@ -217,7 +235,7 @@ namespace ShikiShiro
                 new Vector3(3f, 4f, -3f),
                 new Vector3(8f, 2f, -6f)
             };
-            float[] scales = { 0.34f, 0.28f, 0.36f };
+            float[] scales = { 0.22f, 0.28f, 0.34f };
 
             string[] paths = { GameAssets.Pistol, GameAssets.Smg, GameAssets.Shotgun };
             _gunVisuals = new GameObject[paths.Length];
@@ -278,19 +296,9 @@ namespace ShikiShiro
         {
             string[] hide = index switch
             {
-                0 => new[]
-                {
-                    "Stock", "Scope", "Cage", "Foregrip", "Forend", "Gas_Outlet", "Mag_Holder", "Magazine",
-                    "Bullet", "Sight", "Dovetail", "Main_Barrel", "Barrel_Upper", "Mode_Switch"
-                },
-                1 => new[]
-                {
-                    "Stock", "Scope", "Sight", "Forend", "Gas_Outlet"
-                },
-                _ => new[]
-                {
-                    "Scope", "Cage", "Magazine", "Mag_Holder", "Bullet", "Gas_Outlet", "Mode_Switch", "Foregrip"
-                }
+                0 => new[] { "Scope", "Stock", "Cage", "Foregrip" },
+                1 => new[] { "Scope" },
+                _ => new[] { "Scope", "Cage" }
             };
 
             Transform[] parts = gun.GetComponentsInChildren<Transform>(true);

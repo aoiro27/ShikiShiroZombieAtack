@@ -14,6 +14,7 @@ namespace ShikiShiro
         private readonly List<AudioClip> _booms = new List<AudioClip>();
         private readonly List<AudioClip> _impacts = new List<AudioClip>();
         private readonly List<AudioClip> _flesh = new List<AudioClip>();
+        private readonly List<AudioClip> _kills = new List<AudioClip>();
         private readonly List<AudioClip> _groans = new List<AudioClip>();
         private readonly List<AudioClip> _deaths = new List<AudioClip>();
         private AudioClip _reload;
@@ -34,9 +35,10 @@ namespace ShikiShiro
             _bgm = MakeSource("BgmSource", 0.42f, true);
             Classify(Resources.LoadAll<AudioClip>("Sfx"));
             ClassifyVoices(Resources.LoadAll<AudioClip>("Voice"));
-            _pistolSynth = BuildGun(140f, 0.11f, 0.7f);
-            _smgSynth = BuildGun(210f, 0.06f, 0.48f);
-            _shotgunSynth = BuildGun(80f, 0.16f, 0.85f);
+            _pistolSynth = BuildGun(0.12f, 0.82f, false);
+            _smgSynth = BuildGun(0.07f, 0.62f, true);
+            _shotgunSynth = BuildGun(0.22f, 0.95f, false);
+            _explosionSynth = BuildExplosion();
             _reload = BuildTone(420f, 0.12f, 0.18f, false);
             _hit = BuildTone(70f, 0.08f, 0.35f, true);
             _pickup = BuildTone(660f, 0.1f, 0.22f, false);
@@ -73,17 +75,17 @@ namespace ShikiShiro
         {
             if (id == WeaponId.Smg)
             {
-                PlayMix(_sfx, _smgShots, _smgSynth, 0.85f, 0.22f);
+                PlayPacked(_sfx, _smgShots, _smgSynth, 1f, 0.94f, 1.08f);
                 return;
             }
 
             if (id == WeaponId.Shotgun)
             {
-                PlayMix(_sfx, _shotgunShots.Count > 0 ? _shotgunShots : _booms, _shotgunSynth, 0.9f, 0.35f);
+                PlayPacked(_sfx, _shotgunShots, _shotgunSynth, 1f, 0.92f, 1.04f);
                 return;
             }
 
-            PlayMix(_sfx, _pistolShots.Count > 0 ? _pistolShots : _smgShots, _pistolSynth, 0.9f, 0.22f);
+            PlayPacked(_sfx, _pistolShots.Count > 0 ? _pistolShots : _smgShots, _pistolSynth, 1f, 0.93f, 1.06f);
         }
 
         public void PlayReload() => SafeOneShot(_sfx, _reload, 0.7f);
@@ -94,17 +96,31 @@ namespace ShikiShiro
         {
             if (_flesh.Count > 0)
             {
-                SafeOneShot(_sfx, Pick(_flesh), heavy ? 1f : 0.72f);
+                SafeOneShot(_sfx, Pick(_flesh), heavy ? 0.95f : 0.7f);
             }
-
-            if (_impacts.Count > 0)
+            else if (_kills.Count > 0)
             {
-                SafeOneShot(_sfx, Pick(_impacts), heavy ? 0.55f : 0.35f);
+                SafeOneShot(_sfx, Pick(_kills), heavy ? 0.7f : 0.45f);
             }
             else
             {
                 SafeOneShot(_sfx, _hit, heavy ? 1f : 0.6f);
             }
+        }
+
+        public void PlayKill(bool headshot)
+        {
+            if (_kills.Count > 0)
+            {
+                SafeOneShot(_sfx, Pick(_kills), headshot ? 1f : 0.92f);
+            }
+
+            if (_flesh.Count > 0)
+            {
+                SafeOneShot(_sfx, Pick(_flesh), headshot ? 0.85f : 0.7f);
+            }
+
+            PlayDeath();
         }
 
         public void PlayBoom()
@@ -117,6 +133,16 @@ namespace ShikiShiro
             {
                 SafeOneShot(_sfx, _shotgunSynth, 0.8f);
             }
+        }
+
+        public void PlayExplosion()
+        {
+            if (_booms.Count > 0)
+            {
+                SafeOneShot(_sfx, Pick(_booms), 1f);
+            }
+
+            SafeOneShot(_sfx, _explosionSynth, 1f);
         }
 
         public void PlayImpact()
@@ -151,8 +177,6 @@ namespace ShikiShiro
             {
                 SafeOneShot(_voice, clip, 1f);
             }
-
-            PlayBoom();
         }
 
         public void PlayPickup() => SafeOneShot(_sfx, _pickup, 0.8f);
@@ -187,31 +211,38 @@ namespace ShikiShiro
             for (int i = 0; i < packed.Length; i++)
             {
                 string n = packed[i].name.ToLowerInvariant();
-                if (n.StartsWith("lasersmall") || n.StartsWith("laserlarge"))
+                if (n.StartsWith("laser") || n.Contains("slime"))
+                {
+                    continue;
+                }
+
+                if (n.StartsWith("gun_pistol"))
                 {
                     _pistolShots.Add(packed[i]);
                 }
-                else if (n.StartsWith("laserretro"))
+                else if (n.StartsWith("gun_smg") || n.StartsWith("gun_rifle"))
                 {
                     _smgShots.Add(packed[i]);
                 }
-                else if (n.StartsWith("lowfrequency_explosion"))
+                else if (n.StartsWith("gun_shotgun"))
                 {
                     _shotgunShots.Add(packed[i]);
-                    _booms.Add(packed[i]);
                 }
-                else if (n.StartsWith("explosioncrunch"))
+                else if (n.StartsWith("kill_flesh") || n.StartsWith("wet_break"))
+                {
+                    _kills.Add(packed[i]);
+                }
+                else if (n.StartsWith("flesh_hit") || n.Contains("chop") || n.Contains("knifeslice"))
+                {
+                    _flesh.Add(packed[i]);
+                }
+                else if (n.StartsWith("explosion") || n.StartsWith("lowfrequency_explosion"))
                 {
                     _booms.Add(packed[i]);
-                    _shotgunShots.Add(packed[i]);
                 }
                 else if (n.StartsWith("impact"))
                 {
                     _impacts.Add(packed[i]);
-                }
-                else if (n.Contains("chop") || n.Contains("wood_heavy") || n.Contains("slime") || n.Contains("knifeslice"))
-                {
-                    _flesh.Add(packed[i]);
                 }
             }
         }
@@ -233,16 +264,18 @@ namespace ShikiShiro
             }
         }
 
-        private static void PlayMix(AudioSource source, List<AudioClip> clips, AudioClip synth, float packedVol, float synthVol)
+        private static void PlayPacked(AudioSource source, List<AudioClip> clips, AudioClip fallback, float volume, float pitchMin, float pitchMax)
         {
-            if (clips != null && clips.Count > 0)
+            AudioClip clip = clips != null && clips.Count > 0 ? Pick(clips) : fallback;
+            if (source == null || clip == null)
             {
-                SafeOneShot(source, Pick(clips), packedVol);
-                SafeOneShot(source, synth, synthVol);
                 return;
             }
 
-            SafeOneShot(source, synth, 1f);
+            float pitch = source.pitch;
+            source.pitch = Random.Range(pitchMin, pitchMax);
+            source.PlayOneShot(clip, volume);
+            source.pitch = pitch;
         }
 
         private static void SafeOneShot(AudioSource source, AudioClip clip, float volume)
@@ -260,19 +293,50 @@ namespace ShikiShiro
             return clips[Random.Range(0, clips.Count)];
         }
 
-        private static AudioClip BuildGun(float frequency, float duration, float volume)
+        private static AudioClip BuildExplosion()
+        {
+            const int hz = 22050;
+            const float duration = 0.58f;
+            int samples = Mathf.CeilToInt(hz * duration);
+            var clip = AudioClip.Create("explosion", samples, 1, hz, false);
+            var data = new float[samples];
+            float low = 0f;
+            for (int i = 0; i < samples; i++)
+            {
+                float t = i / (float)hz;
+                float env = Mathf.Exp(-t * 5.8f);
+                float thump = Mathf.Sin(2f * Mathf.PI * 36f * t) * Mathf.Exp(-t * 12f);
+                float rumble = Mathf.Sin(2f * Mathf.PI * (48f + t * 22f) * t);
+                float noise = Random.value * 2f - 1f;
+                low = low * 0.72f + noise * 0.28f;
+                float sample = (thump * 0.7f + rumble * 0.35f + low * 0.5f) * env;
+                data[i] = Mathf.Clamp(sample, -1f, 1f);
+            }
+
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private static AudioClip BuildGun(float duration, float volume, bool shortBurst)
         {
             int hz = 22050;
             int samples = Mathf.CeilToInt(hz * duration);
             var clip = AudioClip.Create("gun", samples, 1, hz, false);
             var data = new float[samples];
+            float low = 0f;
+            float mid = 0f;
+            float crackHz = shortBurst ? 1900f : 1400f;
             for (int i = 0; i < samples; i++)
             {
                 float t = i / (float)hz;
-                float env = Mathf.Exp(-t * 28f);
-                float boom = Mathf.Sin(2f * Mathf.PI * frequency * t) * 0.45f;
-                float crack = (Random.value * 2f - 1f) * 0.55f;
-                data[i] = (boom + crack) * env * volume;
+                float env = Mathf.Exp(-t * (shortBurst ? 48f : 22f));
+                float noise = Random.value * 2f - 1f;
+                low = low * 0.82f + noise * 0.18f;
+                mid = mid * 0.55f + noise * 0.45f;
+                float thud = Mathf.Sin(2f * Mathf.PI * (48f + t * 30f) * t) * Mathf.Exp(-t * 18f);
+                float crack = Mathf.Sin(2f * Mathf.PI * crackHz * t) * Mathf.Exp(-t * 90f) * 0.18f;
+                float sample = (thud * 0.55f + low * 0.7f + mid * 0.35f + crack) * env * volume;
+                data[i] = Mathf.Clamp(sample, -1f, 1f);
             }
 
             clip.SetData(data, 0);

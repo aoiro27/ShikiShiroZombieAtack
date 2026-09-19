@@ -26,7 +26,6 @@ namespace ShikiShiro
         private float _nextAttack;
         private float _nextGroan;
         private float _stagger;
-        private float _despawnAt;
         private float _bob;
         private ZombieBodyMotion _motion;
         private Renderer[] _renderers;
@@ -72,7 +71,6 @@ namespace ShikiShiro
             transform.position = position + Vector3.up * 0.05f;
             IsAlive = true;
             _stagger = 0f;
-            _despawnAt = 0f;
             _nextAttack = Time.time + 0.75f;
             _nextGroan = Time.time + Random.Range(1.2f, 4.5f);
             _controller.enabled = true;
@@ -94,10 +92,6 @@ namespace ShikiShiro
             _health -= info.Amount;
             _fx.Blood(info.Point, info.Direction, info.IsHeadshot);
             _sfx.PlayFlesh(info.IsHeadshot);
-            if (info.IsHeadshot)
-            {
-                _sfx.PlayBoom();
-            }
 
             _stagger = info.IsHeadshot ? 0.45f : 0.12f;
             Flash(info.IsHeadshot ? Color.white : new Color(1f, 0.4f, 0.4f));
@@ -109,17 +103,7 @@ namespace ShikiShiro
 
         private void Update()
         {
-            if (!IsAlive)
-            {
-                if (_despawnAt > 0f && Time.time >= _despawnAt)
-                {
-                    _horde.Despawn(this);
-                }
-
-                return;
-            }
-
-            if (_target == null)
+            if (!IsAlive || _target == null)
             {
                 return;
             }
@@ -254,8 +238,7 @@ namespace ShikiShiro
             Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
             float scale = Kind == ZombieKind.Brute ? 1.65f : 1f;
             _fx.Explosion(boom, dir, scale);
-            _fx.Blood(info.Point, dir, true);
-            _sfx.PlayExplosion();
+            _sfx.PlayKill(info.IsHeadshot);
             _session.RegisterKill(Kind, info.IsHeadshot);
             _horde.NotifyKilled(this);
             if (Random.value < 0.18f)
