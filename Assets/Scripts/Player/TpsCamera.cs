@@ -15,7 +15,7 @@ namespace ShikiShiro
             _target = target;
             UnityCamera = gameObject.AddComponent<Camera>();
             UnityCamera.fieldOfView = 75f;
-            UnityCamera.nearClipPlane = 0.03f;
+            UnityCamera.nearClipPlane = 0.12f;
             UnityCamera.farClipPlane = 650f;
             UnityCamera.backgroundColor = new Color(0.62f, 0.76f, 0.92f);
             UnityCamera.clearFlags = CameraClearFlags.SolidColor;

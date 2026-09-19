@@ -188,32 +188,36 @@ namespace ShikiShiro
             _viewRoot.SetParent(_camera.transform, false);
 
             int viewLayer = LayerMask.NameToLayer("ViewModel");
-            var vmCamGo = new GameObject("ViewmodelCamera");
-            vmCamGo.transform.SetParent(_camera.transform, false);
-            vmCamGo.transform.localPosition = Vector3.zero;
-            vmCamGo.transform.localRotation = Quaternion.identity;
-            var vmCam = vmCamGo.AddComponent<Camera>();
-            vmCam.clearFlags = CameraClearFlags.Depth;
-            vmCam.depth = _camera.UnityCamera.depth + 1f;
-            vmCam.fieldOfView = 50f;
-            vmCam.nearClipPlane = 0.02f;
-            vmCam.farClipPlane = 4f;
-            vmCam.allowHDR = false;
-            vmCam.cullingMask = viewLayer >= 0 ? 1 << viewLayer : _camera.UnityCamera.cullingMask;
+            if (viewLayer >= 0)
+            {
+                var vmCamGo = new GameObject("ViewmodelCamera");
+                vmCamGo.transform.SetParent(_camera.transform, false);
+                vmCamGo.transform.localPosition = Vector3.zero;
+                vmCamGo.transform.localRotation = Quaternion.identity;
+                var vmCam = vmCamGo.AddComponent<Camera>();
+                vmCam.clearFlags = CameraClearFlags.Depth;
+                vmCam.depth = _camera.UnityCamera.depth + 1f;
+                vmCam.fieldOfView = _camera.UnityCamera.fieldOfView;
+                vmCam.nearClipPlane = 0.05f;
+                vmCam.farClipPlane = 2.5f;
+                vmCam.allowHDR = false;
+                vmCam.cullingMask = 1 << viewLayer;
+                _camera.UnityCamera.cullingMask &= ~(1 << viewLayer);
+            }
 
             _hipPos = new[]
             {
-                new Vector3(0.18f, -0.22f, 0.42f),
-                new Vector3(0.22f, -0.28f, 0.48f),
-                new Vector3(0.24f, -0.32f, 0.52f)
+                new Vector3(0.22f, -0.16f, 0.36f),
+                new Vector3(0.20f, -0.24f, 0.46f),
+                new Vector3(0.14f, -0.30f, 0.58f)
             };
             _hipEuler = new[]
             {
-                new Vector3(4f, 6f, -2f),
+                new Vector3(2f, 8f, -4f),
                 new Vector3(3f, 4f, -3f),
-                new Vector3(6f, 5f, -4f)
+                new Vector3(8f, 2f, -6f)
             };
-            float[] scales = { 0.26f, 0.3f, 0.33f };
+            float[] scales = { 0.34f, 0.28f, 0.36f };
 
             string[] paths = { GameAssets.Pistol, GameAssets.Smg, GameAssets.Shotgun };
             _gunVisuals = new GameObject[paths.Length];
@@ -236,6 +240,7 @@ namespace ShikiShiro
                     renderer.receiveShadows = false;
                 }
 
+                StyleWeapon(gun, i);
                 AlignViewmodel(gun, scales[i]);
                 if (viewLayer >= 0)
                 {
@@ -256,12 +261,79 @@ namespace ShikiShiro
                 gun.transform.localScale = new Vector3(0.05f, 0.05f, 0.45f);
                 gun.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.08f, 0.08f, 0.09f), 0.6f, 0.4f);
                 Destroy(gun.GetComponent<Collider>());
+                if (viewLayer >= 0)
+                {
+                    GameAssets.SetLayerRecursively(gun, viewLayer);
+                }
+
                 _gunVisuals[0] = gun;
             }
 
             _muzzle = new GameObject("Muzzle").transform;
             _muzzle.SetParent(_viewRoot, false);
             _muzzle.localPosition = new Vector3(0.05f, -0.02f, 0.72f);
+        }
+
+        private static void StyleWeapon(GameObject gun, int index)
+        {
+            string[] hide = index switch
+            {
+                0 => new[]
+                {
+                    "Stock", "Scope", "Cage", "Foregrip", "Forend", "Gas_Outlet", "Mag_Holder", "Magazine",
+                    "Bullet", "Sight", "Dovetail", "Main_Barrel", "Barrel_Upper", "Mode_Switch"
+                },
+                1 => new[]
+                {
+                    "Stock", "Scope", "Sight", "Forend", "Gas_Outlet"
+                },
+                _ => new[]
+                {
+                    "Scope", "Cage", "Magazine", "Mag_Holder", "Bullet", "Gas_Outlet", "Mode_Switch", "Foregrip"
+                }
+            };
+
+            Transform[] parts = gun.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i] == gun.transform)
+                {
+                    continue;
+                }
+
+                string n = parts[i].name;
+                for (int h = 0; h < hide.Length; h++)
+                {
+                    if (n.IndexOf(hide[h], StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        parts[i].gameObject.SetActive(false);
+                        break;
+                    }
+                }
+            }
+
+            Color tint = index switch
+            {
+                0 => new Color(0.12f, 0.12f, 0.14f, 1f),
+                1 => new Color(0.18f, 0.22f, 0.28f, 1f),
+                _ => new Color(0.28f, 0.18f, 0.10f, 1f)
+            };
+            foreach (Renderer renderer in gun.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!renderer.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                Material mat = renderer.material;
+                mat.color = tint;
+                if (mat.HasProperty("_BaseColor"))
+                {
+                    mat.SetColor("_BaseColor", tint);
+                }
+
+                renderer.material = mat;
+            }
         }
 
         private static void AlignViewmodel(GameObject gun, float scale)

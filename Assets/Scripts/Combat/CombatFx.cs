@@ -133,14 +133,15 @@ namespace ShikiShiro
             }
         }
 
-        public void Explosion(Vector3 point, Vector3 direction)
+        public void Explosion(Vector3 point, Vector3 direction, float scale = 1f)
         {
+            float s = Mathf.Max(0.4f, scale);
             Quaternion rot = Quaternion.LookRotation(direction.sqrMagnitude > 0.01f ? direction : Vector3.up);
-            Emit(_explodeFlash, point, rot, 3);
-            Emit(_explodeFire, point, rot, 36);
-            Emit(_explodeSmoke, point, rot, 16);
-            Emit(_sparks, point, rot, 40);
-            PulseHitLight(point, new Color(1f, 0.5f, 0.12f), 12f, 0.12f);
+            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(4f * s));
+            Emit(_explodeFire, point, rot, Mathf.RoundToInt(42f * s));
+            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(20f * s));
+            Emit(_sparks, point, rot, Mathf.RoundToInt(48f * s));
+            PulseHitLight(point, new Color(1f, 0.5f, 0.12f), 14f * s, 0.16f);
         }
 
         public void Tracer(Vector3 from, Vector3 to)

@@ -22,6 +22,7 @@ namespace ShikiShiro
         private AudioClip _pistolSynth;
         private AudioClip _smgSynth;
         private AudioClip _shotgunSynth;
+        private AudioClip _explosionSynth;
         private float _nextGroanAt;
 
         public void Initialize()

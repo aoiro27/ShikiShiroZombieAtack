@@ -6,7 +6,7 @@ namespace ShikiShiro
 {
     public sealed class HudController : MonoBehaviour
     {
-        private Text _health;
+        private Image _healthFill;
         private Text _ammo;
         private Text _wave;
         private Text _score;
@@ -80,13 +80,29 @@ namespace ShikiShiro
 
         private void OnHealth(float current, float max)
         {
-            _health.text = $"HP  {Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+            float ratio = max > 0f ? Mathf.Clamp01(current / max) : 0f;
+            if (_healthFill != null)
+            {
+                _healthFill.fillAmount = ratio;
+                _healthFill.color = HealthColor(ratio);
+            }
+
             if (_hurt != null && current < max)
             {
                 Color c = _hurt.color;
                 c.a = 0.35f;
                 _hurt.color = c;
             }
+        }
+
+        private static Color HealthColor(float ratio)
+        {
+            if (ratio > 0.5f)
+            {
+                return Color.Lerp(new Color(0.92f, 0.78f, 0.18f), new Color(0.28f, 0.86f, 0.38f), (ratio - 0.5f) * 2f);
+            }
+
+            return Color.Lerp(new Color(0.82f, 0.12f, 0.12f), new Color(0.92f, 0.78f, 0.18f), ratio * 2f);
         }
 
         private void RefreshAmmo()
@@ -165,7 +181,7 @@ namespace ShikiShiro
             safeRt.offsetMin = Vector2.zero;
             safeRt.offsetMax = Vector2.zero;
 
-            _health = CreateHudPlate(safeGo.transform, "Health", new Vector2(24, -24), new Vector2(460, 86), new Vector2(0f, 1f), TextAnchor.MiddleLeft);
+            _healthFill = CreateHealthGauge(safeGo.transform, new Vector2(24, -24), new Vector2(460, 72));
             _wave = CreateHudPlate(safeGo.transform, "Wave", new Vector2(0, -24), new Vector2(280, 78), new Vector2(0.5f, 1f), TextAnchor.MiddleCenter);
             _score = CreateHudPlate(safeGo.transform, "Score", new Vector2(-320, -24), new Vector2(360, 96), new Vector2(1f, 1f), TextAnchor.MiddleRight);
             _ammo = CreateHudPlate(safeGo.transform, "Ammo", new Vector2(-48, 470), new Vector2(360, 100), new Vector2(1f, 0f), TextAnchor.MiddleRight);
@@ -196,12 +212,18 @@ namespace ShikiShiro
 
             var cross = CreateSprite(safeGo.transform, "Crosshair", UiSprites.Crosshair, Color.white);
             var cRt = cross.GetComponent<RectTransform>();
-            cRt.anchorMin = cRt.anchorMax = cRt.pivot = new Vector2(0.5f, 0.52f);
-            cRt.sizeDelta = new Vector2(56, 56);
+            cRt.anchorMin = cRt.anchorMax = cRt.pivot = new Vector2(0.5f, 0.5f);
+            cRt.sizeDelta = new Vector2(92, 92);
             cross.GetComponent<Image>().raycastTarget = false;
 
-            MoveStick = CreateJoystick(safeGo.transform, new Vector2(220, 210), "MoveStick");
-            LookStick = CreateJoystick(safeGo.transform, new Vector2(-420, 210), "LookStick");
+            MoveStick = CreateJoystick(safeGo.transform, new Vector2(48, 56), "MoveStick", new Vector2(300, 300), 112f);
+            var moveLabel = CreateText(MoveStick.transform, "MoveLabel", Vector2.zero, new Vector2(220, 40), 26, TextAnchor.MiddleCenter);
+            moveLabel.text = "移動";
+            moveLabel.raycastTarget = false;
+            var mlRt = moveLabel.rectTransform;
+            mlRt.anchorMin = mlRt.anchorMax = mlRt.pivot = new Vector2(0.5f, 0f);
+            mlRt.anchoredPosition = new Vector2(0f, -36f);
+            LookStick = CreateJoystick(safeGo.transform, new Vector2(-420, 210), "LookStick", new Vector2(220, 220), 82f);
             var lookRt = LookStick.GetComponent<RectTransform>();
             lookRt.anchorMin = lookRt.anchorMax = lookRt.pivot = new Vector2(1f, 0f);
 
@@ -226,6 +248,11 @@ namespace ShikiShiro
             pauseRt.anchorMin = pauseRt.anchorMax = pauseRt.pivot = new Vector2(1f, 1f);
 
             _minimap = MinimapHud.Create(safeGo.transform);
+            Transform crosshair = safeGo.transform.Find("Crosshair");
+            if (crosshair != null)
+            {
+                crosshair.SetAsLastSibling();
+            }
 
             var pausePanel = CreatePanel(safeGo.transform, "Pause", new Color(0f, 0f, 0f, 0.55f));
             var pauseRtPanel = pausePanel.GetComponent<RectTransform>();
@@ -244,21 +271,21 @@ namespace ShikiShiro
             pausePanel.GetComponent<Image>().raycastTarget = false;
         }
 
-        private VirtualJoystick CreateJoystick(Transform parent, Vector2 anchored, string name)
+        private VirtualJoystick CreateJoystick(Transform parent, Vector2 anchored, string name, Vector2 size, float radius)
         {
             var root = CreateSprite(parent, name, UiSprites.Ring, Color.white);
             var rt = root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
             rt.anchoredPosition = anchored;
-            rt.sizeDelta = new Vector2(248, 248);
+            rt.sizeDelta = size;
             var handle = CreateSprite(root.transform, "Handle", UiSprites.Knob, Color.white);
             var hRt = handle.GetComponent<RectTransform>();
             hRt.anchorMin = hRt.anchorMax = hRt.pivot = new Vector2(0.5f, 0.5f);
             hRt.anchoredPosition = Vector2.zero;
-            hRt.sizeDelta = new Vector2(96, 96);
+            hRt.sizeDelta = size * 0.46f;
             handle.GetComponent<Image>().raycastTarget = false;
             var joy = root.AddComponent<VirtualJoystick>();
-            joy.Configure(hRt, 92f);
+            joy.Configure(hRt, radius);
             return joy;
         }
 
@@ -317,6 +344,52 @@ namespace ShikiShiro
             }
 
             return go;
+        }
+
+        private Image CreateHealthGauge(Transform parent, Vector2 pos, Vector2 size)
+        {
+            var plate = CreateSprite(parent, "HealthPlate", UiSprites.Panel, Color.white);
+            var rt = plate.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            var plateImage = plate.GetComponent<Image>();
+            plateImage.type = Image.Type.Sliced;
+            plateImage.preserveAspect = false;
+            plateImage.raycastTarget = false;
+
+            var label = CreateText(plate.transform, "HealthLabel", Vector2.zero, new Vector2(70f, size.y), 28, TextAnchor.MiddleCenter);
+            label.text = "HP";
+            label.raycastTarget = false;
+            var labelRt = label.rectTransform;
+            labelRt.anchorMin = new Vector2(0f, 0f);
+            labelRt.anchorMax = new Vector2(0f, 1f);
+            labelRt.pivot = new Vector2(0f, 0.5f);
+            labelRt.offsetMin = new Vector2(10f, 8f);
+            labelRt.offsetMax = new Vector2(78f, -8f);
+
+            var track = CreatePanel(plate.transform, "HealthTrack", new Color(0.08f, 0.09f, 0.1f, 0.85f));
+            var trackRt = track.GetComponent<RectTransform>();
+            trackRt.anchorMin = new Vector2(0f, 0f);
+            trackRt.anchorMax = new Vector2(1f, 1f);
+            trackRt.offsetMin = new Vector2(82f, 18f);
+            trackRt.offsetMax = new Vector2(-16f, -18f);
+            track.GetComponent<Image>().raycastTarget = false;
+
+            var fillGo = CreateSprite(track.transform, "HealthFill", UiSprites.White, new Color(0.28f, 0.86f, 0.38f, 1f));
+            var fillRt = fillGo.GetComponent<RectTransform>();
+            fillRt.anchorMin = Vector2.zero;
+            fillRt.anchorMax = Vector2.one;
+            fillRt.offsetMin = Vector2.zero;
+            fillRt.offsetMax = Vector2.zero;
+            var fill = fillGo.GetComponent<Image>();
+            fill.preserveAspect = false;
+            fill.raycastTarget = false;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fill.fillAmount = 1f;
+            return fill;
         }
 
         private Text CreateHudPlate(Transform parent, string name, Vector2 pos, Vector2 size, Vector2 anchor, TextAnchor align)

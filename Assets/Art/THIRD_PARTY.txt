@@ -29,6 +29,7 @@ Visual models (CC0, Unity-ready):
   https://kenney.nl/assets/game-icons
   https://kenney.nl/assets/shooting-gallery
   Fire button: Assets/Resources/Ui/fire_button.png
+  Move stick well/cap: Assets/Resources/Ui/stick_base.png, stick_knob.png
 
 Unity Asset Store (standard EULA), used at runtime:
 

@@ -76,7 +76,10 @@ namespace ShikiShiro
             _nextAttack = Time.time + 0.75f;
             _nextGroan = Time.time + Random.Range(1.2f, 4.5f);
             _controller.enabled = true;
+            _visual.gameObject.SetActive(true);
             _visual.localScale = Vector3.one;
+            _visual.localRotation = Quaternion.identity;
+            _visual.localPosition = Vector3.zero;
             ApplyKind(kind);
             gameObject.SetActive(true);
         }
@@ -245,20 +248,23 @@ namespace ShikiShiro
         {
             IsAlive = false;
             _controller.enabled = false;
-            _despawnAt = Time.time + 2.4f;
-            _visual.localRotation = Quaternion.Euler(-55f, 0f, 12f);
-            _visual.localPosition = new Vector3(0f, 0.15f, 0.2f);
-            _motion?.Tick(false, false, true, 0f);
-            Vector3 boom = transform.position + Vector3.up * 0.9f;
-            _fx.Explosion(boom, info.Direction);
-            _fx.Blood(info.Point, info.Direction, true);
-            _sfx.PlayDeath();
+            CancelInvoke(nameof(RestoreColor));
+            Vector3 pos = transform.position;
+            Vector3 boom = pos + Vector3.up * 0.9f;
+            Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
+            float scale = Kind == ZombieKind.Brute ? 1.65f : 1f;
+            _fx.Explosion(boom, dir, scale);
+            _fx.Blood(info.Point, dir, true);
+            _sfx.PlayExplosion();
             _session.RegisterKill(Kind, info.IsHeadshot);
             _horde.NotifyKilled(this);
             if (Random.value < 0.18f)
             {
-                _horde.DropPickup(transform.position);
+                _horde.DropPickup(pos);
             }
+
+            _visual.gameObject.SetActive(false);
+            _horde.Despawn(this);
         }
 
         private void ApplyKind(ZombieKind kind)

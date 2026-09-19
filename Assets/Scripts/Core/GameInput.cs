@@ -57,7 +57,7 @@ namespace ShikiShiro
             Move = Vector2.ClampMagnitude(move, 1f);
             Look = _lookStick != null ? _lookStick.Value : Vector2.zero;
             GyroLook = ReadGyro();
-            FireHeld = _touchFire || Input.GetKey(KeyCode.Mouse0) || Input.GetKey(KeyCode.Space);
+            FireHeld = _touchFire || Input.GetKey(KeyCode.Space);
             ReloadPressed = _touchReload || Input.GetKeyDown(KeyCode.R);
             SprintHeld = _touchSprint || Input.GetKey(KeyCode.LeftShift);
             SwapPressed = _touchSwap || Input.GetKeyDown(KeyCode.Q);

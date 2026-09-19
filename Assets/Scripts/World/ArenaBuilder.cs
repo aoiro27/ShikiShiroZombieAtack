@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ShikiShiro
@@ -10,7 +11,7 @@ namespace ShikiShiro
         private const int BuildingsPerEdge = 3;
         private const int StreetCount = 5;
         private const float GroundTop = 0f;
-        private const float RoadY = 0.02f;
+        private const float RoadY = 0.08f;
 
         private readonly Transform _root;
         private readonly Material _asphalt;
@@ -126,8 +127,8 @@ namespace ShikiShiro
                     var pad = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     pad.name = "Lot";
                     pad.transform.SetParent(_root, false);
-                    pad.transform.position = new Vector3(cx, GroundTop - 0.01f, cz);
-                    pad.transform.localScale = new Vector3(_block - 0.6f, 0.02f, _block - 0.6f);
+                    pad.transform.position = new Vector3(cx, GroundTop - 0.06f, cz);
+                    pad.transform.localScale = new Vector3(_block - 0.8f, 0.02f, _block - 0.8f);
                     Object.Destroy(pad.GetComponent<Collider>());
                     pad.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.42f, 0.4f, 0.36f), GameAssets.LoadCityAtlas(), 0.02f, 0.12f);
                 }
@@ -139,20 +140,37 @@ namespace ShikiShiro
             int last = StreetCount / 2;
             float extent = last * _pitch + RoadWidth * 0.5f;
             int tiles = Mathf.CeilToInt(extent / RoadWidth);
+            var used = new HashSet<Vector2Int>();
             for (int s = -last; s <= last; s++)
             {
                 float street = s * _pitch;
                 for (int t = -tiles; t <= tiles; t++)
                 {
                     float along = t * RoadWidth;
-                    bool cross = OnStreet(along);
-                    SpawnRoad(cross ? "KayKit/road_junction" : "KayKit/road_straight", new Vector3(street, RoadY, along), Quaternion.identity);
-                    if (!cross)
-                    {
-                        SpawnRoad("KayKit/road_straight", new Vector3(along, RoadY, street), Quaternion.Euler(0f, 90f, 0f));
-                    }
+                    TrySpawnRoadCell(street, along, used);
+                    TrySpawnRoadCell(along, street, used);
                 }
             }
+        }
+
+        private void TrySpawnRoadCell(float x, float z, HashSet<Vector2Int> used)
+        {
+            bool ns = OnStreet(x);
+            bool ew = OnStreet(z);
+            if (!ns && !ew)
+            {
+                return;
+            }
+
+            var cell = new Vector2Int(Mathf.RoundToInt(x / RoadWidth), Mathf.RoundToInt(z / RoadWidth));
+            if (!used.Add(cell))
+            {
+                return;
+            }
+
+            string path = ns && ew ? "KayKit/road_junction" : "KayKit/road_straight";
+            Quaternion rot = !ns && ew ? Quaternion.Euler(0f, 90f, 0f) : Quaternion.identity;
+            SpawnRoad(path, new Vector3(x, RoadY, z), rot);
         }
 
         private void PlaceDistrict()
@@ -200,7 +218,12 @@ namespace ShikiShiro
             GameObject go = GameAssets.SpawnProp(path, _root, position, rotation, false);
             if (go != null)
             {
-                GameAssets.FitFootprint(go, RoadWidth * 0.992f, RoadWidth * 0.992f);
+                GameAssets.FitFootprint(go, RoadWidth * 0.999f, RoadWidth * 0.999f);
+                foreach (Renderer renderer in go.GetComponentsInChildren<Renderer>(true))
+                {
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
             }
         }
 

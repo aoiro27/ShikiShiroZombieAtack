@@ -13,6 +13,7 @@ namespace ShikiShiro
         public static Sprite Pause { get; private set; }
         public static Sprite Crosshair { get; private set; }
         public static Sprite Panel { get; private set; }
+        public static Sprite White { get; private set; }
         public static Sprite Blip { get; private set; }
         public static Sprite Arrow { get; private set; }
 
@@ -20,8 +21,8 @@ namespace ShikiShiro
         {
             if (Ring == null)
             {
-                Ring = MakeRing();
-                Knob = MakeKnob();
+                Ring = LoadSprite("Ui/stick_base") ?? MakeRing();
+                Knob = LoadSprite("Ui/stick_knob") ?? MakeKnob();
                 Fire = LoadSprite("Ui/fire_button") ?? MakeFire();
                 Reload = MakeReload();
                 Sprint = MakeSprint();
@@ -29,6 +30,11 @@ namespace ShikiShiro
                 Pause = MakePause();
                 Crosshair = MakeCrosshair();
                 Panel = MakePanel();
+            }
+
+            if (White == null)
+            {
+                White = MakeWhite();
             }
 
             if (Blip == null)
@@ -121,17 +127,33 @@ namespace ShikiShiro
 
         private static Sprite MakeCrosshair()
         {
-            const int s = 64;
+            const int s = 128;
             var px = new Color[s * s];
             int m = s / 2;
-            for (int i = 0; i < s; i++)
-            {
-                Set(px, s, m, i, new Color(1f, 1f, 1f, i > 18 && i < 46 ? 0.95f : 0f));
-                Set(px, s, i, m, new Color(1f, 1f, 1f, i > 18 && i < 46 ? 0.95f : 0f));
-            }
-
-            Set(px, s, m, m, new Color(1f, 0.85f, 0.35f, 1f));
+            DrawCrosshairArm(px, s, m, true, 5, new Color(0f, 0f, 0f, 0.85f));
+            DrawCrosshairArm(px, s, m, false, 5, new Color(0f, 0f, 0f, 0.85f));
+            DrawCrosshairArm(px, s, m, true, 2, new Color(1f, 0.95f, 0.2f, 1f));
+            DrawCrosshairArm(px, s, m, false, 2, new Color(1f, 0.95f, 0.2f, 1f));
+            Stamp(px, s, m, m, 4, new Color(0f, 0f, 0f, 0.9f));
+            Stamp(px, s, m, m, 2, new Color(1f, 0.2f, 0.12f, 1f));
             return ToSprite(px, s, s);
+        }
+
+        private static void DrawCrosshairArm(Color[] px, int s, int m, bool horizontal, int thickness, Color color)
+        {
+            const int inner = 10;
+            const int outer = 46;
+            for (int i = inner; i <= outer; i++)
+            {
+                Stamp(px, s, horizontal ? m + i : m, horizontal ? m : m + i, thickness, color);
+                Stamp(px, s, horizontal ? m - i : m, horizontal ? m : m - i, thickness, color);
+            }
+        }
+
+        private static Sprite MakeWhite()
+        {
+            var px = new[] { Color.white };
+            return ToSprite(px, 1, 1);
         }
 
         private static Sprite MakePanel()

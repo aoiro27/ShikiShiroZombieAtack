@@ -40,7 +40,7 @@ namespace ShikiShiro
             mapRt.offsetMin = new Vector2(12f, 12f);
             mapRt.offsetMax = new Vector2(-12f, -12f);
             var mapImg = map.GetComponent<Image>();
-            mapImg.color = new Color(0.18f, 0.22f, 0.18f, 1f);
+            mapImg.color = new Color(0.08f, 0.11f, 0.09f, 1f);
             mapImg.raycastTarget = false;
 
             AddGrid(mapRt);
@@ -65,7 +65,7 @@ namespace ShikiShiro
                 hud._enemyBlips[i].gameObject.SetActive(false);
             }
 
-            hud._playerBlip.SetAsFirstSibling();
+            hud._playerBlip.SetAsLastSibling();
             return hud;
         }
 
@@ -85,7 +85,7 @@ namespace ShikiShiro
             _playerBlip.gameObject.SetActive(true);
             _playerBlip.anchoredPosition = Vector2.zero;
             _playerBlip.localEulerAngles = new Vector3(0f, 0f, -_player.eulerAngles.y);
-            _playerBlip.SetAsFirstSibling();
+            _playerBlip.SetAsLastSibling();
 
             if (_horde == null)
             {
@@ -131,9 +131,10 @@ namespace ShikiShiro
             go.transform.SetParent(parent, false);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(12f, 12f);
-            MakeBlip(rt, "Halo", UiSprites.Blip, new Color(0f, 0f, 0f, 0.85f), 12f);
-            MakeBlip(rt, "Core", UiSprites.Blip, new Color(1f, 0.18f, 0.1f, 1f), 8f);
+            rt.sizeDelta = new Vector2(22f, 22f);
+            MakeBlip(rt, "Glow", UiSprites.Blip, new Color(1f, 0.22f, 0.05f, 0.7f), 22f);
+            MakeBlip(rt, "Body", UiSprites.Blip, new Color(1f, 0.12f, 0.04f, 1f), 16f);
+            MakeBlip(rt, "Core", UiSprites.Blip, new Color(1f, 0.95f, 0.35f, 1f), 8f);
             return rt;
         }
 

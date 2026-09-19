@@ -393,16 +393,25 @@ namespace ShikiShiro
 
         private static Bounds? CombinedBounds(GameObject go)
         {
-            Renderer[] renderers = go.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0)
+            Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
+            Bounds? bounds = null;
+            for (int i = 0; i < renderers.Length; i++)
             {
-                return null;
-            }
+                if (!renderers[i].enabled || !renderers[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
 
-            Bounds bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++)
-            {
-                bounds.Encapsulate(renderers[i].bounds);
+                if (!bounds.HasValue)
+                {
+                    bounds = renderers[i].bounds;
+                }
+                else
+                {
+                    Bounds b = bounds.Value;
+                    b.Encapsulate(renderers[i].bounds);
+                    bounds = b;
+                }
             }
 
             return bounds;
