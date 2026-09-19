@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 33270822265238854}
   - component: {fileID: 23767043221971756}
   - component: {fileID: 54238244902362926}
-  - component: {fileID: 114121961160874846}
   - component: {fileID: 82444821930212418}
   m_Layer: 9
   m_Name: P_LPSP_Casing_Small
@@ -100,35 +99,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 1
---- !u!114 &114121961160874846
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1492315059354262}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: acff82b1c71481f48a9f9884f9f62d6b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minimumXForce: 25
-  maximumXForce: 40
-  minimumYForce: 10
-  maximumYForce: 20
-  minimumZForce: -12
-  maximumZForce: 12
-  minimumRotation: -360
-  maximumRotation: 360
-  despawnTime: 1
-  casingSounds:
-  - {fileID: 8300000, guid: 82fd1b9495a6b2045bbeabe4b7c168da, type: 3}
-  - {fileID: 8300000, guid: 9900c91b18eff614bb5654ec3471c41a, type: 3}
-  - {fileID: 8300000, guid: 978c88d300d39be41bc7eba2331d1c4c, type: 3}
-  - {fileID: 8300000, guid: 1715c914ea52a9f4ebac3ad860573e80, type: 3}
-  - {fileID: 8300000, guid: b8431057c404b004db076407851e3ede, type: 3}
-  audioSource: {fileID: 82444821930212418}
-  speed: 2500
 --- !u!82 &82444821930212418
 AudioSource:
   m_ObjectHideFlags: 0

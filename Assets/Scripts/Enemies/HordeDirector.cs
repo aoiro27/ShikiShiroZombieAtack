@@ -34,7 +34,7 @@ namespace ShikiShiro
 
             var zombieRoot = new GameObject("ZombiePool").transform;
             zombieRoot.SetParent(transform, false);
-            _zombies = new ObjectPool<ZombieAgent>(CreateZombie, zombieRoot, 0);
+            _zombies = new ObjectPool<ZombieAgent>(CreateZombie, zombieRoot, config.ZombiePoolSize);
 
             var pickupRoot = new GameObject("PickupPool").transform;
             pickupRoot.SetParent(transform, false);
@@ -62,6 +62,60 @@ namespace ShikiShiro
             pickup.Setup(PickupKind.Medkit, position, _player, _sfx);
         }
 
+        public void ChainBurst(ZombieAgent source, in DamageInfo info)
+        {
+            if (source == null || info.ChainDepth >= 2)
+            {
+                return;
+            }
+
+            StartCoroutine(ChainBurstRoutine(source.transform.position, info));
+        }
+
+        private IEnumerator ChainBurstRoutine(Vector3 origin, DamageInfo info)
+        {
+            const float radius = 6.2f;
+            const int maxVictims = 12;
+            var victims = new List<ZombieAgent>(maxVictims);
+            var all = AllZombies;
+            for (int i = 0; i < all.Count && victims.Count < maxVictims; i++)
+            {
+                ZombieAgent z = all[i];
+                if (z == null || !z.IsAlive || !z.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                Vector3 delta = z.transform.position - origin;
+                delta.y = 0f;
+                if (delta.sqrMagnitude <= radius * radius)
+                {
+                    victims.Add(z);
+                }
+            }
+
+            int nextDepth = info.ChainDepth + 1;
+            for (int i = 0; i < victims.Count; i++)
+            {
+                yield return new WaitForSeconds(0.045f);
+                ZombieAgent z = victims[i];
+                if (z == null || !z.IsAlive)
+                {
+                    continue;
+                }
+
+                Vector3 boom = z.transform.position + Vector3.up * 0.9f;
+                Vector3 dir = (z.transform.position - origin);
+                dir.y = 0.4f;
+                if (dir.sqrMagnitude < 0.01f)
+                {
+                    dir = Vector3.up;
+                }
+
+                z.ApplyDamage(new DamageInfo(999f, boom, dir.normalized, false, info.Weapon, nextDepth));
+            }
+        }
+
         private IEnumerator RunWaves()
         {
             yield return null;
@@ -71,7 +125,7 @@ namespace ShikiShiro
             while (_session.State != SessionState.GameOver)
             {
                 int wave = _session.Wave;
-                _remainingToSpawn = 6 + wave * 3;
+                _remainingToSpawn = 16 + wave * 8;
                 _alive = 0;
                 _hud.Announce($"WAVE {wave}");
                 _sfx.PlayRoar();
@@ -89,12 +143,12 @@ namespace ShikiShiro
                         break;
                     }
 
-                    int pack = Mathf.Clamp(4 + wave / 2, 4, 8);
+                    int pack = Mathf.Clamp(8 + wave, 8, 18);
                     pack = Mathf.Min(pack, _remainingToSpawn);
                     yield return SpawnPack(pack, wave);
                     if (_remainingToSpawn > 0 && _session.State == SessionState.Playing)
                     {
-                        yield return new WaitForSeconds(Mathf.Lerp(7.5f, 5f, Mathf.Clamp01(wave / 10f)));
+                        yield return new WaitForSeconds(Mathf.Lerp(3.4f, 1.8f, Mathf.Clamp01(wave / 8f)));
                     }
                 }
 
@@ -130,12 +184,12 @@ namespace ShikiShiro
                     yield break;
                 }
 
-                Vector3 pos = PlaceAround(anchor, 1.1f, 3.4f);
+                Vector3 pos = PlaceAround(anchor, 0.6f, 2.4f);
                 ZombieAgent zombie = _zombies.Get();
                 zombie.Spawn(SelectKind(wave), pos, _player, _session, _fx, _sfx, this);
                 _alive++;
                 _remainingToSpawn--;
-                yield return new WaitForSeconds(0.12f);
+                yield return new WaitForSeconds(0.05f);
             }
         }
 
@@ -152,7 +206,7 @@ namespace ShikiShiro
             while (guard < 12 && Mathf.Abs(Mathf.DeltaAngle(_lastPackAngle, angle)) < 70f);
 
             _lastPackAngle = angle;
-            Vector3 raw = origin + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(22f, 34f);
+            Vector3 raw = origin + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(14f, 24f);
             return PlaceAround(raw, 0f, 1.2f);
         }
 
@@ -180,7 +234,7 @@ namespace ShikiShiro
                 }
 
                 Vector2 fromPlayer = new Vector2(p.x - origin.x, p.z - origin.z);
-                if (fromPlayer.sqrMagnitude < 18f * 18f)
+                if (fromPlayer.sqrMagnitude < 11f * 11f)
                 {
                     continue;
                 }

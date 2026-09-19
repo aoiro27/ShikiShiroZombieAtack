@@ -20,6 +20,9 @@ namespace ShikiShiro
         public static Sprite Blip { get; private set; }
         public static Sprite Arrow { get; private set; }
         public static Sprite FacingCone { get; private set; }
+        public static Sprite HurtVignette { get; private set; }
+        public static Sprite BiteMark { get; private set; }
+        public static Sprite BloodSplat { get; private set; }
 
         public static void Ensure()
         {
@@ -57,6 +60,21 @@ namespace ShikiShiro
             if (FacingCone == null)
             {
                 FacingCone = MakeFacingCone();
+            }
+
+            if (HurtVignette == null)
+            {
+                HurtVignette = MakeHurtVignette();
+            }
+
+            if (BiteMark == null)
+            {
+                BiteMark = MakeBiteMark();
+            }
+
+            if (BloodSplat == null)
+            {
+                BloodSplat = MakeBloodSplat();
             }
         }
 
@@ -267,6 +285,113 @@ namespace ShikiShiro
             }
 
             return ToSprite(px, s, s);
+        }
+
+        private static Sprite MakeHurtVignette()
+        {
+            const int s = 256;
+            var px = new Color[s * s];
+            float c = (s - 1) * 0.5f;
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    float n = Vector2.Distance(new Vector2(x, y), new Vector2(c, c)) / c;
+                    float a = Mathf.SmoothStep(0.28f, 1.02f, n);
+                    a = a * a * 0.95f;
+                    px[y * s + x] = new Color(0.45f, 0.0f, 0.0f, a);
+                }
+            }
+
+            return ToSprite(px, s, s);
+        }
+
+        private static Sprite MakeBiteMark()
+        {
+            const int s = 256;
+            var px = new Color[s * s];
+            DrawJaw(px, s, 0.62f, -1f);
+            DrawJaw(px, s, 0.38f, 1f);
+            return ToSprite(px, s, s);
+        }
+
+        private static void DrawJaw(Color[] px, int s, float yNorm, float pointDir)
+        {
+            const int teeth = 9;
+            for (int i = 0; i < teeth; i++)
+            {
+                float t = (i + 0.5f) / teeth;
+                float x = Mathf.Lerp(0.18f, 0.82f, t) * (s - 1);
+                float y = yNorm * (s - 1);
+                float w = s * 0.042f;
+                float h = s * (0.11f + 0.03f * Mathf.Sin(i * 1.7f));
+                DrawTooth(px, s, x, y, w, h * pointDir, new Color(0.22f, 0.0f, 0.0f, 0.95f));
+            }
+
+            int gy = Mathf.RoundToInt(yNorm * (s - 1));
+            for (int x = Mathf.RoundToInt(s * 0.16f); x < Mathf.RoundToInt(s * 0.84f); x++)
+            {
+                for (int t = -3; t <= 3; t++)
+                {
+                    Set(px, s, x, gy + t, new Color(0.18f, 0.0f, 0.0f, 0.7f));
+                }
+            }
+        }
+
+        private static void DrawTooth(Color[] px, int s, float cx, float cy, float halfW, float height, Color col)
+        {
+            int steps = Mathf.Max(8, Mathf.RoundToInt(Mathf.Abs(height)));
+            for (int i = 0; i <= steps; i++)
+            {
+                float u = i / (float)steps;
+                float y = cy + height * u;
+                float w = halfW * (1f - u);
+                int y0 = Mathf.RoundToInt(y);
+                int x0 = Mathf.RoundToInt(cx - w);
+                int x1 = Mathf.RoundToInt(cx + w);
+                for (int x = x0; x <= x1; x++)
+                {
+                    Set(px, s, x, y0, col);
+                    Set(px, s, x, y0 + 1, col);
+                }
+            }
+        }
+
+        private static Sprite MakeBloodSplat()
+        {
+            const int s = 128;
+            var px = new Color[s * s];
+            float c = (s - 1) * 0.5f;
+            DrawBlob(px, s, c, c, 0.38f * s, new Color(0.38f, 0.0f, 0.0f, 0.95f));
+            DrawBlob(px, s, c + 18f, c - 10f, 0.18f * s, new Color(0.32f, 0.0f, 0.0f, 0.85f));
+            DrawBlob(px, s, c - 16f, c + 8f, 0.16f * s, new Color(0.28f, 0.0f, 0.0f, 0.8f));
+            DrawBlob(px, s, c + 8f, c + 22f, 0.11f * s, new Color(0.4f, 0.02f, 0.02f, 0.75f));
+            DrawBlob(px, s, c - 22f, c - 14f, 0.1f * s, new Color(0.3f, 0.0f, 0.0f, 0.7f));
+            return ToSprite(px, s, s);
+        }
+
+        private static void DrawBlob(Color[] px, int s, float cx, float cy, float radius, Color col)
+        {
+            int r = Mathf.CeilToInt(radius);
+            int x0 = Mathf.Max(0, Mathf.FloorToInt(cx - r));
+            int x1 = Mathf.Min(s - 1, Mathf.CeilToInt(cx + r));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt(cy - r));
+            int y1 = Mathf.Min(s - 1, Mathf.CeilToInt(cy + r));
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    float dx = (x - cx) / radius;
+                    float dy = (y - cy) / radius;
+                    float n = dx * dx * 0.85f + dy * dy * 1.15f + 0.12f * Mathf.Sin(x * 0.35f + y * 0.22f);
+                    if (n < 1f)
+                    {
+                        Color d = col;
+                        d.a *= 1f - n;
+                        Set(px, s, x, y, d);
+                    }
+                }
+            }
         }
 
         private delegate void IconDraw(Color[] px, int s, Color ink);

@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 5457230}
   - component: {fileID: 6495192}
   - component: {fileID: 8240162}
-  - component: {fileID: 11451544}
   m_Layer: 0
   m_Name: Gas Tank Piece 2
   m_TagString: Metal
@@ -211,25 +210,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &11451544
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 127812}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5ea607472a68444785030fb49e7baa8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debrisSounds:
-  - {fileID: 8300000, guid: f8fd487d40a01ed4d93646ed55b01caa, type: 3}
-  - {fileID: 8300000, guid: 1e53cdfa1ed59454bbb1043449220f03, type: 3}
-  - {fileID: 8300000, guid: 60edd00008b29dd428e0a9ebfd7b83ce, type: 3}
-  - {fileID: 8300000, guid: 2674533448d9ec84fa4fcdb4167cf107, type: 3}
-  - {fileID: 8300000, guid: 74ae15352e8603f41895eaf71d4ed3d6, type: 3}
-  audioSource: {fileID: 8240162}
 --- !u!1 &161938
 GameObject:
   m_ObjectHideFlags: 0
@@ -244,7 +224,6 @@ GameObject:
   - component: {fileID: 5466840}
   - component: {fileID: 6422802}
   - component: {fileID: 8285862}
-  - component: {fileID: 11498560}
   m_Layer: 0
   m_Name: Gas Tank Piece 3
   m_TagString: Metal
@@ -441,25 +420,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &11498560
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 161938}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5ea607472a68444785030fb49e7baa8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debrisSounds:
-  - {fileID: 8300000, guid: f8fd487d40a01ed4d93646ed55b01caa, type: 3}
-  - {fileID: 8300000, guid: 1e53cdfa1ed59454bbb1043449220f03, type: 3}
-  - {fileID: 8300000, guid: 60edd00008b29dd428e0a9ebfd7b83ce, type: 3}
-  - {fileID: 8300000, guid: 2674533448d9ec84fa4fcdb4167cf107, type: 3}
-  - {fileID: 8300000, guid: 74ae15352e8603f41895eaf71d4ed3d6, type: 3}
-  audioSource: {fileID: 8285862}
 --- !u!1 &194506
 GameObject:
   m_ObjectHideFlags: 0
@@ -474,7 +434,6 @@ GameObject:
   - component: {fileID: 5403062}
   - component: {fileID: 6481940}
   - component: {fileID: 8279458}
-  - component: {fileID: 11494400}
   m_Layer: 0
   m_Name: Gas Tank Piece 1
   m_TagString: Metal
@@ -671,25 +630,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &11494400
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194506}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5ea607472a68444785030fb49e7baa8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debrisSounds:
-  - {fileID: 8300000, guid: f8fd487d40a01ed4d93646ed55b01caa, type: 3}
-  - {fileID: 8300000, guid: 1e53cdfa1ed59454bbb1043449220f03, type: 3}
-  - {fileID: 8300000, guid: 60edd00008b29dd428e0a9ebfd7b83ce, type: 3}
-  - {fileID: 8300000, guid: 2674533448d9ec84fa4fcdb4167cf107, type: 3}
-  - {fileID: 8300000, guid: 74ae15352e8603f41895eaf71d4ed3d6, type: 3}
-  audioSource: {fileID: 8279458}
 --- !u!1 &196926
 GameObject:
   m_ObjectHideFlags: 0

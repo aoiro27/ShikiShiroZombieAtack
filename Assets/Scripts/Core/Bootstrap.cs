@@ -129,7 +129,7 @@ namespace ShikiShiro
 
             var hudGo = new GameObject("HudSystem");
             var hud = hudGo.AddComponent<HudController>();
-            hud.Initialize(vitality, weapons, session, input);
+            hud.Initialize(vitality, weapons, session, input, cameraRig);
             input.Bind(hud.MoveStick, hud.LookStick);
 
             var horde = services.AddComponent<HordeDirector>();

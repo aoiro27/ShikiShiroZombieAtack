@@ -42,7 +42,6 @@ GameObject:
   - component: {fileID: 402676}
   - component: {fileID: 8266322}
   - component: {fileID: 11170672}
-  - component: {fileID: 11442052}
   - component: {fileID: 8350241503574334549}
   m_Layer: 0
   m_Name: Target
@@ -179,26 +178,6 @@ Animation:
   m_PlayAutomatically: 0
   m_AnimatePhysics: 0
   m_CullingType: 0
---- !u!114 &11442052
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 173508}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cbc4c318247cfe2428546d89544fe5d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isHit: 0
-  minTime: 5
-  maxTime: 25
-  upSound: {fileID: 8300000, guid: 5ac1ab6757d23ab4f894d6cb67561a4e, type: 3}
-  downSound: {fileID: 8300000, guid: 4f120bb808808344aa7438eec17f1531, type: 3}
-  targetUp: {fileID: 7400000, guid: 01c68c5d22e1c154e901a582f8d5c830, type: 2}
-  targetDown: {fileID: 7400000, guid: 27aef40e00639a14ba8114fc14640cf1, type: 2}
-  audioSource: {fileID: 8266322}
 --- !u!65 &8350241503574334549
 BoxCollider:
   m_ObjectHideFlags: 0

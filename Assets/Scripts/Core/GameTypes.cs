@@ -21,7 +21,8 @@ namespace ShikiShiro
     {
         Pistol,
         Smg,
-        Shotgun
+        Shotgun,
+        Bite
     }
 
     public enum PickupKind
@@ -37,14 +38,16 @@ namespace ShikiShiro
         public readonly Vector3 Direction;
         public readonly bool IsHeadshot;
         public readonly WeaponId Weapon;
+        public readonly int ChainDepth;
 
-        public DamageInfo(float amount, Vector3 point, Vector3 direction, bool isHeadshot, WeaponId weapon)
+        public DamageInfo(float amount, Vector3 point, Vector3 direction, bool isHeadshot, WeaponId weapon, int chainDepth = 0)
         {
             Amount = amount;
             Point = point;
             Direction = direction;
             IsHeadshot = isHeadshot;
             Weapon = weapon;
+            ChainDepth = chainDepth;
         }
     }
 
@@ -66,9 +69,9 @@ namespace ShikiShiro
         public float CameraDistance = 3.6f;
         public float CameraHeight = 1.55f;
         public float CameraCollisionRadius = 0.22f;
-        public int MaxAliveZombies = 18;
-        public int ZombiePoolSize = 48;
-        public float PickupDropChance = 0.18f;
+        public int MaxAliveZombies = 56;
+        public int ZombiePoolSize = 96;
+        public float PickupDropChance = 0.1f;
         public string HighScoreKey = "ssza.highscore";
     }
 }

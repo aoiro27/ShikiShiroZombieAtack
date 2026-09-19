@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -18,6 +19,10 @@ namespace ShikiShiro
         private ParticleSystem _explodeFire;
         private ParticleSystem _explodeFlash;
         private ParticleSystem _explodeSmoke;
+        private ParticleSystem _explodeShock;
+        private ParticleSystem _explodeGibs;
+        private ParticleSystem _explodeEmbers;
+        private Coroutine _hitstop;
         private Light _muzzleLight;
         private Light _hitLight;
         private float _muzzleLightUntil;
@@ -65,18 +70,30 @@ namespace ShikiShiro
             ConfigureBurst(_bloodSpray, cone: 28f, speed: 14f, size: 0.05f, life: 0.32f, gravity: 1.8f, new Color(0.7f, 0.0f, 0.0f, 1f));
             _bloodMist = BuildParticles(root, "BloodMist", alpha, 64, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_bloodMist, cone: 70f, speed: 2.2f, size: 0.35f, life: 0.7f, gravity: 0.4f, new Color(0.35f, 0.0f, 0.0f, 0.55f));
-            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 120, ParticleSystemRenderMode.Billboard);
-            ConfigureBurst(_explodeFire, cone: 80f, speed: 8f, size: 0.28f, life: 0.28f, gravity: -0.4f, new Color(1f, 0.45f, 0.08f, 1f));
-            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 24, ParticleSystemRenderMode.Billboard);
-            ConfigureBurst(_explodeFlash, cone: 0f, speed: 0.2f, size: 1.1f, life: 0.08f, gravity: 0f, new Color(1f, 0.85f, 0.4f, 1f));
-            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 72, ParticleSystemRenderMode.Billboard);
-            ConfigureBurst(_explodeSmoke, cone: 60f, speed: 2.4f, size: 0.55f, life: 0.85f, gravity: -0.35f, new Color(0.18f, 0.12f, 0.1f, 0.6f));
+            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 420, ParticleSystemRenderMode.Billboard);
+            ConfigureBurst(_explodeFire, cone: 90f, speed: 14f, size: 0.55f, life: 0.42f, gravity: -0.8f, new Color(1f, 0.42f, 0.05f, 1f));
+            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 48, ParticleSystemRenderMode.Billboard);
+            ConfigureBurst(_explodeFlash, cone: 0f, speed: 0.15f, size: 2.4f, life: 0.1f, gravity: 0f, new Color(1f, 0.92f, 0.55f, 1f));
+            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 220, ParticleSystemRenderMode.Billboard);
+            ConfigureBurst(_explodeSmoke, cone: 75f, speed: 3.6f, size: 1.15f, life: 1.15f, gravity: -0.45f, new Color(0.16f, 0.1f, 0.08f, 0.72f));
+            _explodeShock = BuildParticles(root, "ExplodeShock", additive, 8, ParticleSystemRenderMode.Billboard);
+            ConfigureShock(_explodeShock, new Color(1f, 0.7f, 0.25f, 0.85f));
+            _explodeGibs = BuildParticles(root, "ExplodeGibs", alpha, 180, ParticleSystemRenderMode.Stretch);
+            var gibR = _explodeGibs.GetComponent<ParticleSystemRenderer>();
+            gibR.lengthScale = 2.8f;
+            gibR.velocityScale = 0.16f;
+            ConfigureBurst(_explodeGibs, cone: 70f, speed: 16f, size: 0.09f, life: 0.55f, gravity: 3.4f, new Color(0.55f, 0.04f, 0.02f, 1f));
+            _explodeEmbers = BuildParticles(root, "ExplodeEmbers", additive, 220, ParticleSystemRenderMode.Stretch);
+            var emberR = _explodeEmbers.GetComponent<ParticleSystemRenderer>();
+            emberR.lengthScale = 3.6f;
+            emberR.velocityScale = 0.2f;
+            ConfigureBurst(_explodeEmbers, cone: 85f, speed: 18f, size: 0.07f, life: 0.38f, gravity: 1.2f, new Color(1f, 0.55f, 0.12f, 1f));
 
             var hitLightGo = new GameObject("HitLight");
             hitLightGo.transform.SetParent(root, false);
             _hitLight = hitLightGo.AddComponent<Light>();
             _hitLight.type = LightType.Point;
-            _hitLight.range = 7f;
+            _hitLight.range = 14f;
             _hitLight.shadows = LightShadows.None;
             _hitLight.enabled = false;
 
@@ -133,15 +150,44 @@ namespace ShikiShiro
             }
         }
 
+        public void PlayerWound(Vector3 point, Vector3 incoming)
+        {
+            Vector3 dir = incoming.sqrMagnitude > 0.01f ? -incoming.normalized : Vector3.up;
+            dir = (dir + Vector3.up * 0.25f).normalized;
+            Quaternion rot = Quaternion.LookRotation(dir);
+            Vector3 origin = point + dir * 0.18f;
+            Emit(_bloodSpray, origin, rot, 22);
+            Emit(_blood, origin, rot, 16);
+            Emit(_bloodMist, origin, rot, 8);
+            PulseHitLight(origin, new Color(0.55f, 0.02f, 0.02f), 3.2f, 0.08f);
+        }
+
         public void Explosion(Vector3 point, Vector3 direction, float scale = 1f)
         {
-            float s = Mathf.Max(0.4f, scale);
+            float s = Mathf.Max(0.5f, scale);
             Quaternion rot = Quaternion.LookRotation(direction.sqrMagnitude > 0.01f ? direction : Vector3.up);
-            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(4f * s));
-            Emit(_explodeFire, point, rot, Mathf.RoundToInt(42f * s));
-            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(20f * s));
-            Emit(_sparks, point, rot, Mathf.RoundToInt(48f * s));
-            PulseHitLight(point, new Color(1f, 0.5f, 0.12f), 14f * s, 0.16f);
+            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(8f * s));
+            Emit(_explodeShock, point, Quaternion.identity, 2);
+            Emit(_explodeFire, point, rot, Mathf.RoundToInt(90f * s));
+            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(36f * s));
+            Emit(_explodeEmbers, point, rot, Mathf.RoundToInt(70f * s));
+            Emit(_explodeGibs, point, rot, Mathf.RoundToInt(48f * s));
+            Emit(_blood, point, rot, Mathf.RoundToInt(28f * s));
+            Emit(_bloodMist, point, rot, Mathf.RoundToInt(16f * s));
+            Emit(_sparks, point, rot, Mathf.RoundToInt(64f * s));
+            PulseHitLight(point, new Color(1f, 0.48f, 0.1f), 22f * s, 0.22f);
+        }
+
+        public void KillPunch(float scale)
+        {
+            TpsCamera cam = Camera.main != null ? Camera.main.GetComponent<TpsCamera>() : null;
+            cam?.Shake(0.32f * scale, 0.28f);
+            if (_hitstop != null)
+            {
+                StopCoroutine(_hitstop);
+            }
+
+            _hitstop = StartCoroutine(Hitstop(0.055f, 0.08f));
         }
 
         public void Tracer(Vector3 from, Vector3 to)
@@ -305,6 +351,49 @@ namespace ShikiShiro
             var sizeMod = ps.sizeOverLifetime;
             sizeMod.enabled = true;
             sizeMod.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0.15f));
+        }
+
+        private static void ConfigureShock(ParticleSystem ps, Color color)
+        {
+            var main = ps.main;
+            main.startLifetime = 0.28f;
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.8f, 1.4f);
+            main.startColor = color;
+            main.gravityModifier = 0f;
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.05f;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(color, 1f) },
+                new[] { new GradientAlphaKey(color.a, 0f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sizeMod = ps.sizeOverLifetime;
+            sizeMod.enabled = true;
+            sizeMod.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.2f, 1f, 6.5f));
+        }
+
+        private IEnumerator Hitstop(float duration, float scale)
+        {
+            if (Time.timeScale <= 0.001f)
+            {
+                _hitstop = null;
+                yield break;
+            }
+
+            float previous = Time.timeScale;
+            Time.timeScale = scale;
+            yield return new WaitForSecondsRealtime(duration);
+            if (Time.timeScale > 0.001f)
+            {
+                Time.timeScale = previous <= 0.001f ? 1f : previous;
+            }
+
+            _hitstop = null;
         }
 
         private static LineRenderer MakeTracerLine(Transform parent, string name, Material mat, float width, Color color)

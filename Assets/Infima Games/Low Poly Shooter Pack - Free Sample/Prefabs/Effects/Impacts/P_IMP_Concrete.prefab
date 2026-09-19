@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4587651611338842}
-  - component: {fileID: 114777204554752142}
   - component: {fileID: 82763957066427458}
   m_Layer: 0
   m_Name: P_IMP_Concrete
@@ -35,25 +34,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &114777204554752142
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1067471869909948}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9e1ff595cafaf634c8876e79d424183b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  despawnTimer: 10
-  impactSounds:
-  - {fileID: 8300000, guid: 172f576bc4226094180d5993f9325d57, type: 3}
-  - {fileID: 8300000, guid: ead9439cc21260d44b99cc5037814e27, type: 3}
-  - {fileID: 8300000, guid: 26c5b6d560a62c946accc4e4207b66cc, type: 3}
-  - {fileID: 8300000, guid: 37e08e3552104a248a91d21d637ef2f4, type: 3}
-  audioSource: {fileID: 82763957066427458}
 --- !u!82 &82763957066427458
 AudioSource:
   m_ObjectHideFlags: 0

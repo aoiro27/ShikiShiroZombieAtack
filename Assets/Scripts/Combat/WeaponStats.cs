@@ -44,7 +44,7 @@ namespace ShikiShiro
 
         public static WeaponStats Shotgun()
         {
-            return new WeaponStats(WeaponId.Shotgun, "M870 ショットガン", 11f, 0.72f, 6, 2.1f, 7.5f, 8, 28f, 4.2f, 30);
+            return new WeaponStats(WeaponId.Shotgun, "M870 ショットガン", 9999f, 0.72f, 6, 2.1f, 7.5f, 8, 28f, 4.2f, 30);
         }
     }
 }

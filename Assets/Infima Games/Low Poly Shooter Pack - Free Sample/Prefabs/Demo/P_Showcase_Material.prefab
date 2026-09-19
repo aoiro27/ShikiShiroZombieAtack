@@ -463,7 +463,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2231786659629949324}
-  - component: {fileID: 7636792104923107911}
   m_Layer: 0
   m_Name: P_Showcase_Material
   m_TagString: Untagged
@@ -487,17 +486,3 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7636792104923107911
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2231786659629949325}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9aece93025cae054ca9a4d126da624cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  mesh: {fileID: 2231786658306700070}
-  materialText: {fileID: 2231786659556894273}

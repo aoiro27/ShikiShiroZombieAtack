@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ZombieMale_Shirt_MAT_V1
-  m_Shader: {fileID: 4800000, guid: 0c44c99e580544c4fb45c10695948346, type: 3}
+  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
   m_ValidKeywords:
   - _ALPHATEST_ON
   - _METALLICGLOSSMAP

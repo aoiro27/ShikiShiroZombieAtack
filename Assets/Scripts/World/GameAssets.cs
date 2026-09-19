@@ -101,6 +101,7 @@ namespace ShikiShiro
             visual.transform.localRotation = Quaternion.identity;
             EnsureHeight(visual, 1.8f);
             DisableColliders(visual);
+            RepairBrokenShaders(visual);
             if (!IsProjectAsset(modelPath))
             {
                 ApplyMainTexture(visual, Load<Texture2D>(texturePath));
@@ -149,6 +150,93 @@ namespace ShikiShiro
         public static Bounds? WorldBounds(GameObject go)
         {
             return CombinedBounds(go);
+        }
+
+        public static void RepairBrokenShaders(GameObject go)
+        {
+            if (go == null)
+            {
+                return;
+            }
+
+            Shader fallback = Shader.Find("Standard");
+            if (fallback == null)
+            {
+                fallback = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            if (fallback == null)
+            {
+                return;
+            }
+
+            foreach (Renderer renderer in go.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] shared = renderer.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < shared.Length; i++)
+                {
+                    Material source = shared[i];
+                    if (!IsBrokenShader(source))
+                    {
+                        continue;
+                    }
+
+                    var fixedMat = new Material(fallback);
+                    if (source != null)
+                    {
+                        Texture tex = source.HasProperty("_MainTex") ? source.GetTexture("_MainTex") : source.mainTexture;
+                        if (tex != null)
+                        {
+                            if (fixedMat.HasProperty("_MainTex"))
+                            {
+                                fixedMat.SetTexture("_MainTex", tex);
+                            }
+
+                            if (fixedMat.HasProperty("_BaseMap"))
+                            {
+                                fixedMat.SetTexture("_BaseMap", tex);
+                            }
+
+                            if (!fixedMat.HasProperty("_MainTex") && !fixedMat.HasProperty("_BaseMap"))
+                            {
+                                fixedMat.mainTexture = tex;
+                            }
+                        }
+
+                        if (source.HasProperty("_Color") && fixedMat.HasProperty("_Color"))
+                        {
+                            fixedMat.SetColor("_Color", source.GetColor("_Color"));
+                        }
+
+                        if (source.HasProperty("_Cutoff") && fixedMat.HasProperty("_Cutoff"))
+                        {
+                            fixedMat.SetFloat("_Cutoff", source.GetFloat("_Cutoff"));
+                            fixedMat.EnableKeyword("_ALPHATEST_ON");
+                            fixedMat.renderQueue = 2450;
+                        }
+                    }
+
+                    shared[i] = fixedMat;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    renderer.sharedMaterials = shared;
+                }
+            }
+        }
+
+        private static bool IsBrokenShader(Material material)
+        {
+            if (material == null || material.shader == null)
+            {
+                return true;
+            }
+
+            string name = material.shader.name;
+            return name == "Hidden/InternalErrorShader" || name.IndexOf("InternalError", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public static void ApplyMainTexture(GameObject go, Texture2D texture)

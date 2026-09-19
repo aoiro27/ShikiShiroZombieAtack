@@ -19,7 +19,7 @@ namespace ShikiShiro
         public float ComboTimer { get; private set; }
 
         private GameConfig _config;
-        private float _comboWindow = 2.6f;
+            private float _comboWindow = 3.4f;
 
         public void Initialize(GameConfig config)
         {

@@ -6,6 +6,7 @@ namespace ShikiShiro
     public sealed class PlayerVitality : MonoBehaviour, IDamageable
     {
         public event Action<float, float> HealthChanged;
+        public event Action<DamageInfo> Damaged;
         public event Action Died;
 
         public bool IsAlive => CurrentHealth > 0f;
@@ -44,6 +45,7 @@ namespace ShikiShiro
             CurrentHealth = Mathf.Max(0f, CurrentHealth - info.Amount);
             _invuln = 0.35f;
             HealthChanged?.Invoke(CurrentHealth, MaxHealth);
+            Damaged?.Invoke(info);
             Handheld.Vibrate();
             if (!IsAlive)
             {

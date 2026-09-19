@@ -30,7 +30,6 @@ namespace ShikiShiro
         private ZombieBodyMotion _motion;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _flashBlock;
-        private Texture2D _skin;
         private GameObject _walkerVisual;
         private GameObject _runnerVisual;
         private GameObject _bruteVisual;
@@ -90,11 +89,14 @@ namespace ShikiShiro
             }
 
             _health -= info.Amount;
-            _fx.Blood(info.Point, info.Direction, info.IsHeadshot);
-            _sfx.PlayFlesh(info.IsHeadshot);
+            if (info.ChainDepth == 0)
+            {
+                _fx.Blood(info.Point, info.Direction, info.IsHeadshot);
+                _sfx.PlayFlesh(info.IsHeadshot);
+                _stagger = info.IsHeadshot ? 0.45f : 0.12f;
+                Flash(info.IsHeadshot ? Color.white : new Color(1f, 0.4f, 0.4f));
+            }
 
-            _stagger = info.IsHeadshot ? 0.45f : 0.12f;
-            Flash(info.IsHeadshot ? Color.white : new Color(1f, 0.4f, 0.4f));
             if (_health <= 0f)
             {
                 Die(info);
@@ -159,8 +161,14 @@ namespace ShikiShiro
                 swing = true;
                 if (_playerVitality != null && _playerVitality.IsAlive)
                 {
-                    _playerVitality.ApplyDamage(new DamageInfo(_damage, _target.position + Vector3.up, transform.forward, false, WeaponId.Pistol));
-                    _sfx.PlayHit();
+                    float before = _playerVitality.CurrentHealth;
+                    Vector3 wound = _target.position + Vector3.up * 1.52f;
+                    _playerVitality.ApplyDamage(new DamageInfo(_damage, wound, transform.forward, false, WeaponId.Bite));
+                    if (_playerVitality.CurrentHealth < before)
+                    {
+                        _fx.PlayerWound(wound, transform.forward);
+                        _sfx.PlayBite();
+                    }
                 }
             }
 
@@ -201,7 +209,7 @@ namespace ShikiShiro
 
             if (NeighborBuffer == null)
             {
-                NeighborBuffer = new Collider[16];
+                NeighborBuffer = new Collider[32];
             }
 
             Vector3 sep = Vector3.zero;
@@ -236,12 +244,24 @@ namespace ShikiShiro
             Vector3 pos = transform.position;
             Vector3 boom = pos + Vector3.up * 0.9f;
             Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
-            float scale = Kind == ZombieKind.Brute ? 1.65f : 1f;
+            float scale = Kind == ZombieKind.Brute ? 1.9f : 1.15f;
+            scale *= info.ChainDepth > 0 ? 1.25f : 1f;
             _fx.Explosion(boom, dir, scale);
-            _sfx.PlayKill(info.IsHeadshot);
+            if (info.ChainDepth == 0)
+            {
+                _sfx.PlayKill(info.IsHeadshot);
+                _sfx.PlayBoom();
+                _fx.KillPunch(scale);
+            }
+            else
+            {
+                _sfx.PlayBoom();
+            }
+
             _session.RegisterKill(Kind, info.IsHeadshot);
             _horde.NotifyKilled(this);
-            if (Random.value < 0.18f)
+            _horde.ChainBurst(this, info);
+            if (info.ChainDepth == 0 && Random.value < 0.1f)
             {
                 _horde.DropPickup(pos);
             }
@@ -309,8 +329,8 @@ namespace ShikiShiro
             }
 
             _renderers = _visual.GetComponentsInChildren<Renderer>();
-            _skin = GameAssets.Load<Texture2D>(GameAssets.ZombieAtlas);
             GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
+            RestoreColor();
             _motion?.Bind(_visual);
         }
 
@@ -339,6 +359,12 @@ namespace ShikiShiro
 
             foreach (Renderer r in _renderers)
             {
+                if (r == null)
+                {
+                    continue;
+                }
+
+                _flashBlock.Clear();
                 r.GetPropertyBlock(_flashBlock);
                 _flashBlock.SetColor("_Color", color);
                 _flashBlock.SetColor("_BaseColor", color);
@@ -361,11 +387,6 @@ namespace ShikiShiro
                 {
                     r.SetPropertyBlock(null);
                 }
-            }
-
-            if (_skin != null)
-            {
-                GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
             }
         }
     }

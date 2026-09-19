@@ -19,6 +19,7 @@ namespace ShikiShiro
         private readonly List<AudioClip> _deaths = new List<AudioClip>();
         private AudioClip _reload;
         private AudioClip _hit;
+        private AudioClip _bite;
         private AudioClip _pickup;
         private AudioClip _pistolSynth;
         private AudioClip _smgSynth;
@@ -41,6 +42,7 @@ namespace ShikiShiro
             _explosionSynth = BuildExplosion();
             _reload = BuildTone(420f, 0.12f, 0.18f, false);
             _hit = BuildTone(70f, 0.08f, 0.35f, true);
+            _bite = BuildBite();
             _pickup = BuildTone(660f, 0.1f, 0.22f, false);
         }
 
@@ -91,6 +93,21 @@ namespace ShikiShiro
         public void PlayReload() => SafeOneShot(_sfx, _reload, 0.7f);
 
         public void PlayHit() => SafeOneShot(_sfx, _hit, 0.85f);
+
+        public void PlayBite()
+        {
+            SafeOneShot(_sfx, _bite, 1f);
+            if (_flesh.Count > 0)
+            {
+                SafeOneShot(_sfx, Pick(_flesh), 0.85f);
+            }
+            else
+            {
+                SafeOneShot(_sfx, _hit, 0.9f);
+            }
+
+            PlayGroan(true);
+        }
 
         public void PlayFlesh(bool heavy)
         {
@@ -337,6 +354,32 @@ namespace ShikiShiro
                 float crack = Mathf.Sin(2f * Mathf.PI * crackHz * t) * Mathf.Exp(-t * 90f) * 0.18f;
                 float sample = (thud * 0.55f + low * 0.7f + mid * 0.35f + crack) * env * volume;
                 data[i] = Mathf.Clamp(sample, -1f, 1f);
+            }
+
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private static AudioClip BuildBite()
+        {
+            const int hz = 22050;
+            const float duration = 0.34f;
+            int samples = Mathf.CeilToInt(hz * duration);
+            var clip = AudioClip.Create("bite", samples, 1, hz, false);
+            var data = new float[samples];
+            float lp = 0f;
+            for (int i = 0; i < samples; i++)
+            {
+                float t = i / (float)hz;
+                float env = Mathf.Exp(-t * 7.5f);
+                float jaw = Mathf.Sin(2f * Mathf.PI * (42f + t * 28f) * t) * Mathf.Exp(-t * 11f);
+                float noise = Random.value * 2f - 1f;
+                float cut = t < 0.045f ? 0.62f : 0.16f;
+                lp = lp * (1f - cut) + noise * cut;
+                float click = t < 0.018f ? noise * (1f - t / 0.018f) * 0.55f : 0f;
+                float chomp = t > 0.04f && t < 0.09f ? Mathf.Sin(2f * Mathf.PI * 90f * t) * 0.35f : 0f;
+                float tear = lp * (t > 0.03f && t < 0.22f ? 0.85f : 0.28f);
+                data[i] = Mathf.Clamp((jaw * 0.8f + tear * 0.72f + click + chomp) * env, -1f, 1f);
             }
 
             clip.SetData(data, 0);

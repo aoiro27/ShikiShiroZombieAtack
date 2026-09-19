@@ -7,7 +7,14 @@ namespace ShikiShiro
     public sealed class HudController : MonoBehaviour
     {
         private Image _healthFill;
+        private RectTransform _healthPlate;
         private Image _hurt;
+        private Image _vignette;
+        private Image _biteMark;
+        private Image[] _splats;
+        private float[] _splatLife;
+        private Vector2[] _splatVel;
+        private int _splatCursor;
         private Image[] _weaponIcons;
         private Image[] _weaponFrames;
         private Text _wave;
@@ -15,6 +22,12 @@ namespace ShikiShiro
         private Text _announce;
         private Text _gameOver;
         private float _announceUntil;
+        private float _flash;
+        private float _biteAlpha;
+        private float _biteScale;
+        private float _vignettePulse;
+        private float _healthPunch;
+        private TpsCamera _camera;
         private PlayerVitality _vitality;
         private WeaponController _weapons;
         private GameSession _session;
@@ -26,14 +39,16 @@ namespace ShikiShiro
         public VirtualJoystick MoveStick { get; private set; }
         public VirtualJoystick LookStick { get; private set; }
 
-        public void Initialize(PlayerVitality vitality, WeaponController weapons, GameSession session, GameInput input)
+        public void Initialize(PlayerVitality vitality, WeaponController weapons, GameSession session, GameInput input, TpsCamera camera)
         {
             _vitality = vitality;
             _weapons = weapons;
             _session = session;
             _input = input;
+            _camera = camera;
             BuildCanvas();
             vitality.HealthChanged += OnHealth;
+            vitality.Damaged += OnDamaged;
             weapons.MagazineChanged += RefreshAmmo;
             session.ScoreChanged += _ => RefreshScore();
             session.WaveChanged += _ => RefreshWave();
@@ -42,6 +57,20 @@ namespace ShikiShiro
             RefreshAmmo();
             RefreshScore();
             RefreshWave();
+        }
+
+        private void OnDestroy()
+        {
+            if (_vitality != null)
+            {
+                _vitality.HealthChanged -= OnHealth;
+                _vitality.Damaged -= OnDamaged;
+            }
+
+            if (_session != null)
+            {
+                _session.StateChanged -= OnState;
+            }
         }
 
         public void BindMinimap(Transform player, ArenaBuilder arena, HordeDirector horde)
@@ -71,12 +100,7 @@ namespace ShikiShiro
                 TogglePause();
             }
 
-            if (_hurt != null)
-            {
-                Color c = _hurt.color;
-                c.a = Mathf.MoveTowards(c.a, 0f, Time.deltaTime * 0.8f);
-                _hurt.color = c;
-            }
+            TickHurtFx();
         }
 
         private void OnHealth(float current, float max)
@@ -87,13 +111,145 @@ namespace ShikiShiro
                 _healthFill.fillAmount = ratio;
                 _healthFill.color = HealthColor(ratio);
             }
+        }
 
-            if (_hurt != null && current < max)
+        private void OnDamaged(DamageInfo info)
+        {
+            float intensity = Mathf.Clamp(info.Amount / 14f, 0.7f, 1.85f);
+            _flash = Mathf.Max(_flash, 0.48f * intensity);
+            _vignettePulse = Mathf.Max(_vignettePulse, 0.7f * intensity);
+            _biteAlpha = 1f;
+            _biteScale = 1.28f;
+            _healthPunch = 1.18f;
+            _camera?.BiteKick(info.Direction, intensity);
+            PlaceBite(info.Direction, intensity);
+            SpawnSplats(info.Direction, intensity);
+        }
+
+        private void TickHurtFx()
+        {
+            float dt = Time.deltaTime;
+            _flash = Mathf.MoveTowards(_flash, 0f, dt * 3.6f);
+            _vignettePulse = Mathf.MoveTowards(_vignettePulse, 0f, dt * 1.15f);
+            _biteAlpha = Mathf.MoveTowards(_biteAlpha, 0f, dt * 1.7f);
+            _biteScale = Mathf.MoveTowards(_biteScale, 1f, dt * 2.4f);
+            _healthPunch = Mathf.MoveTowards(_healthPunch, 1f, dt * 3.2f);
+
+            float wound = 0f;
+            if (_vitality != null && _vitality.MaxHealth > 0f)
             {
-                Color c = _hurt.color;
-                c.a = 0.35f;
-                _hurt.color = c;
+                wound = (1f - Mathf.Clamp01(_vitality.CurrentHealth / _vitality.MaxHealth)) * 0.48f;
             }
+
+            if (_hurt != null)
+            {
+                _hurt.color = new Color(0.72f, 0.02f, 0.02f, _flash);
+            }
+
+            if (_vignette != null)
+            {
+                Color v = _vignette.color;
+                v.a = Mathf.Clamp01(wound + _vignettePulse);
+                _vignette.color = v;
+            }
+
+            if (_biteMark != null)
+            {
+                Color b = _biteMark.color;
+                b.a = _biteAlpha;
+                _biteMark.color = b;
+                _biteMark.rectTransform.localScale = Vector3.one * _biteScale;
+            }
+
+            if (_healthPlate != null)
+            {
+                _healthPlate.localScale = new Vector3(_healthPunch, _healthPunch, 1f);
+            }
+
+            if (_splats == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _splats.Length; i++)
+            {
+                if (_splatLife[i] <= 0f)
+                {
+                    continue;
+                }
+
+                _splatLife[i] -= dt;
+                var rt = _splats[i].rectTransform;
+                rt.anchoredPosition += _splatVel[i] * dt;
+                _splatVel[i] += new Vector2(0f, -90f) * dt;
+                Color c = _splats[i].color;
+                c.a = Mathf.Clamp01(_splatLife[i] / 0.85f) * 0.82f;
+                _splats[i].color = c;
+                if (_splatLife[i] <= 0f)
+                {
+                    _splats[i].enabled = false;
+                }
+            }
+        }
+
+        private void PlaceBite(Vector3 incoming, float intensity)
+        {
+            if (_biteMark == null)
+            {
+                return;
+            }
+
+            Vector2 dir = ScreenDir(incoming);
+            float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            var rt = _biteMark.rectTransform;
+            rt.localEulerAngles = new Vector3(0f, 0f, ang - 90f);
+            rt.anchoredPosition = dir * (90f + 40f * intensity);
+            rt.sizeDelta = new Vector2(520f, 520f) * (0.85f + 0.2f * intensity);
+        }
+
+        private void SpawnSplats(Vector3 incoming, float intensity)
+        {
+            if (_splats == null)
+            {
+                return;
+            }
+
+            Vector2 dir = ScreenDir(incoming);
+            int count = Mathf.Clamp(Mathf.RoundToInt(4f * intensity), 4, 8);
+            for (int n = 0; n < count; n++)
+            {
+                int i = _splatCursor;
+                _splatCursor = (_splatCursor + 1) % _splats.Length;
+                var img = _splats[i];
+                img.enabled = true;
+                img.sprite = UiSprites.BloodSplat;
+                float size = Random.Range(90f, 210f) * (0.7f + intensity * 0.35f);
+                var rt = img.rectTransform;
+                rt.sizeDelta = new Vector2(size, size);
+                rt.anchoredPosition = dir * Random.Range(40f, 280f) + Random.insideUnitCircle * 160f;
+                rt.localEulerAngles = new Vector3(0f, 0f, Random.Range(0f, 360f));
+                img.color = new Color(0.42f, 0.01f, 0.01f, 0.9f);
+                _splatLife[i] = Random.Range(0.55f, 1.05f);
+                _splatVel[i] = dir * Random.Range(20f, 80f) + new Vector2(Random.Range(-40f, 40f), Random.Range(-20f, 30f));
+            }
+        }
+
+        private Vector2 ScreenDir(Vector3 incoming)
+        {
+            Transform cam = _camera != null ? _camera.transform : null;
+            if (cam == null)
+            {
+                return Vector2.down;
+            }
+
+            Vector3 dir = incoming.sqrMagnitude > 0.0001f ? -incoming.normalized : -cam.forward;
+            Vector2 screen = new Vector2(Vector3.Dot(dir, cam.right), Vector3.Dot(dir, cam.up));
+            if (screen.sqrMagnitude < 0.04f)
+            {
+                screen = Vector2.down;
+            }
+
+            return screen.normalized;
         }
 
         private static Color HealthColor(float ratio)
@@ -229,13 +385,43 @@ namespace ShikiShiro
             var restart = _gameOver.gameObject.AddComponent<Button>();
             restart.onClick.AddListener(TryRestart);
 
-            _hurt = CreatePanel(safeGo.transform, "Hurt", new Color(0.7f, 0.05f, 0.05f, 0f)).GetComponent<Image>();
+            _hurt = CreatePanel(safeGo.transform, "Hurt", new Color(0.72f, 0.02f, 0.02f, 0f)).GetComponent<Image>();
             var hurtRt = _hurt.rectTransform;
             hurtRt.anchorMin = Vector2.zero;
             hurtRt.anchorMax = Vector2.one;
             hurtRt.offsetMin = Vector2.zero;
             hurtRt.offsetMax = Vector2.zero;
             _hurt.raycastTarget = false;
+
+            _vignette = CreateSprite(safeGo.transform, "HurtVignette", UiSprites.HurtVignette, new Color(0.5f, 0.0f, 0.0f, 0f)).GetComponent<Image>();
+            var vigRt = _vignette.rectTransform;
+            vigRt.anchorMin = Vector2.zero;
+            vigRt.anchorMax = Vector2.one;
+            vigRt.offsetMin = Vector2.zero;
+            vigRt.offsetMax = Vector2.zero;
+            _vignette.preserveAspect = false;
+            _vignette.raycastTarget = false;
+
+            _biteMark = CreateSprite(safeGo.transform, "BiteMark", UiSprites.BiteMark, new Color(0.28f, 0.0f, 0.0f, 0f)).GetComponent<Image>();
+            var biteRt = _biteMark.rectTransform;
+            biteRt.anchorMin = biteRt.anchorMax = biteRt.pivot = new Vector2(0.5f, 0.5f);
+            biteRt.sizeDelta = new Vector2(520f, 520f);
+            _biteMark.raycastTarget = false;
+
+            _splats = new Image[8];
+            _splatLife = new float[8];
+            _splatVel = new Vector2[8];
+            for (int i = 0; i < _splats.Length; i++)
+            {
+                var splat = CreateSprite(safeGo.transform, "Splat" + i, UiSprites.BloodSplat, new Color(0.4f, 0.0f, 0.0f, 0f));
+                var sRt = splat.GetComponent<RectTransform>();
+                sRt.anchorMin = sRt.anchorMax = sRt.pivot = new Vector2(0.5f, 0.5f);
+                sRt.sizeDelta = new Vector2(140f, 140f);
+                var img = splat.GetComponent<Image>();
+                img.raycastTarget = false;
+                img.enabled = false;
+                _splats[i] = img;
+            }
 
             var cross = CreateSprite(safeGo.transform, "Crosshair", UiSprites.Crosshair, Color.white);
             var cRt = cross.GetComponent<RectTransform>();
@@ -301,6 +487,17 @@ namespace ShikiShiro
             {
                 rack.SetAsLastSibling();
             }
+
+            _hurt.transform.SetAsLastSibling();
+            _vignette.transform.SetAsLastSibling();
+            _biteMark.transform.SetAsLastSibling();
+            for (int i = 0; i < _splats.Length; i++)
+            {
+                _splats[i].transform.SetAsLastSibling();
+            }
+
+            pausePanel.transform.SetAsLastSibling();
+            _gameOver.transform.SetAsLastSibling();
         }
 
         private void CreateWeaponRack(Transform parent)
@@ -431,6 +628,7 @@ namespace ShikiShiro
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
+            _healthPlate = rt;
             var plateImage = plate.GetComponent<Image>();
             plateImage.type = Image.Type.Sliced;
             plateImage.preserveAspect = false;

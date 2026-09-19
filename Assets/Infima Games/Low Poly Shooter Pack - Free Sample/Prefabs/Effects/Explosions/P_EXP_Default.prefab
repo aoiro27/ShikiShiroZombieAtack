@@ -19628,7 +19628,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4811645123968692}
   - component: {fileID: 82748325553193224}
-  - component: {fileID: 114439608940470374}
   m_Layer: 0
   m_Name: P_EXP_Default
   m_TagString: Untagged
@@ -19753,29 +19752,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
---- !u!114 &114439608940470374
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1427962332153456}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad207698945475e40a48abe855897cbe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  despawnTime: 15
-  lightDuration: 0.0325
-  lightFlash: {fileID: 108698185339400860}
-  explosionSounds:
-  - {fileID: 8300000, guid: 75f8e14a4e177484a92f318e46c9fa34, type: 3}
-  - {fileID: 8300000, guid: 4172b95278d0adf468a43413cb25c266, type: 3}
-  - {fileID: 8300000, guid: fac766d719e16e847b956d1433580c9d, type: 3}
-  - {fileID: 8300000, guid: aace929ff231c2c44b11cb9d81e49f80, type: 3}
-  - {fileID: 8300000, guid: 8ab79e12da1853c4f9c1b131df2b9c68, type: 3}
-  - {fileID: 8300000, guid: 739db4952129f0242b7aa842bd022a17, type: 3}
-  audioSource: {fileID: 82748325553193224}
 --- !u!1 &1507293946947658
 GameObject:
   m_ObjectHideFlags: 0

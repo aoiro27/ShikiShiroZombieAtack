@@ -274,7 +274,6 @@ GameObject:
   - component: {fileID: 8659805075728532252}
   - component: {fileID: 293764582934449929}
   - component: {fileID: 8875239262955087628}
-  - component: {fileID: 3561186585454293964}
   m_Layer: 5
   m_Name: Text Timescale
   m_TagString: Untagged
@@ -399,18 +398,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &3561186585454293964
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2729873382287545061}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a542164c450a42f48611da98c6706d0f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &3954942930909197653
 GameObject:
   m_ObjectHideFlags: 0
@@ -1156,7 +1143,6 @@ GameObject:
   - component: {fileID: 5393623835644209928}
   - component: {fileID: 5393623835644209934}
   - component: {fileID: 5393623835644209929}
-  - component: {fileID: 3186231601051171096}
   m_Layer: 5
   m_Name: Text Ammunition Total
   m_TagString: Untagged
@@ -1281,18 +1267,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &3186231601051171096
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5393623835644209931}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f4935c311e04f97a173620167a7c602, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &5393623835784200508
 GameObject:
   m_ObjectHideFlags: 0
@@ -1514,7 +1488,6 @@ GameObject:
   - component: {fileID: 5393623836115087791}
   - component: {fileID: 5393623836115087789}
   - component: {fileID: 5393623836115087788}
-  - component: {fileID: 6136844752195832849}
   m_Layer: 5
   m_Name: Text Cursor Lock
   m_TagString: Untagged
@@ -1639,18 +1612,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &6136844752195832849
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5393623836115087790}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b4ef19689b3ec9e4ba9b11d52a197aed, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &5983749243552376780
 GameObject:
   m_ObjectHideFlags: 0
@@ -1660,7 +1621,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5436122539946855348}
-  - component: {fileID: 700819042027278236}
   m_Layer: 5
   m_Name: Images
   m_TagString: Untagged
@@ -1691,21 +1651,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &700819042027278236
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5983749243552376780}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c723532d4684f3a8081200f76b2e80a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  imageWeaponBody: {fileID: 5393623835113149042}
-  imageWeaponMagazine: {fileID: 5393623835286056652}
-  imageWeaponScopeDefault: {fileID: 5393623835903075694}
 --- !u!1 &6099147353904752212
 GameObject:
   m_ObjectHideFlags: 0
@@ -1792,7 +1737,6 @@ GameObject:
   - component: {fileID: 7736403137508204167}
   - component: {fileID: 4427481665261031626}
   - component: {fileID: 7260245196890125288}
-  - component: {fileID: 138533065147042227}
   m_Layer: 5
   m_Name: Text Ammunition Current
   m_TagString: Untagged
@@ -1919,21 +1863,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &138533065147042227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6520662847420304414}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a455a741f8af4da198a2faca1211d5f8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  updateColor: 1
-  emptySpeed: 1.5
-  emptyColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &6923292403387152482
 GameObject:
   m_ObjectHideFlags: 0
@@ -2200,7 +2129,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8286752730204775537}
-  - component: {fileID: 7610452789245829686}
   - component: {fileID: 1724026410830477319}
   - component: {fileID: 7920035857458848741}
   m_Layer: 5
@@ -2231,20 +2159,6 @@ RectTransform:
   m_AnchoredPosition: {x: 175, y: -45}
   m_SizeDelta: {x: 250, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &7610452789245829686
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8267263323337574943}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f62f154937c54b3d96d283111ac7161e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  prompt: {fileID: 4624225957221210479}
-  tutorial: {fileID: 5758853929532471832}
 --- !u!222 &1724026410830477319
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2389,7 +2303,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6223042606961176344}
-  - component: {fileID: 1509821640966628908}
   m_Layer: 5
   m_Name: Crosshair Classic
   m_TagString: Untagged
@@ -2420,20 +2333,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1509821640966628908
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8739481299400528295}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c08e5be185e5f8b478b3b07a4b343a84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  smoothing: 8
-  minimumScale: 0.15
 --- !u!1 &8829448425270801150
 GameObject:
   m_ObjectHideFlags: 0

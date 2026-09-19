@@ -62,6 +62,12 @@ namespace ShikiShiro
             _recoilPitch += pitch;
         }
 
+        public void AddHitPunch(float yaw, float pitch)
+        {
+            Yaw += yaw;
+            _recoilPitch += pitch;
+        }
+
         private void Update()
         {
             if (_input == null)
