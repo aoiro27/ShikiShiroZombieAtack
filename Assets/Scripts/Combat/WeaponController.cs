@@ -29,6 +29,9 @@ namespace ShikiShiro
         private Vector3[] _hipEuler;
         private float _kick;
         private int _zombieMask;
+        private int _obstacleMask;
+        private int _groundMask;
+        private readonly RaycastHit[] _hits = new RaycastHit[24];
         private GameObject[] _gunVisuals;
         private Animator[] _gunAnimators;
         private Camera _viewCam;
@@ -70,7 +73,7 @@ namespace ShikiShiro
 
         private void Update()
         {
-            if (_input == null)
+            if (_input == null || Time.timeScale <= 0.001f)
             {
                 return;
             }

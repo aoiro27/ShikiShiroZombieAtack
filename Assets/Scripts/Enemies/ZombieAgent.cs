@@ -27,6 +27,11 @@ namespace ShikiShiro
         private float _nextGroan;
         private float _stagger;
         private float _bob;
+        private Vector3 _stuckSamplePos;
+        private float _stuckTimer;
+        private float _stuckSampleAt;
+        private float _slideSign = 1f;
+        private float _nextRescue;
         private ZombieBodyMotion _motion;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _flashBlock;
@@ -70,6 +75,11 @@ namespace ShikiShiro
             transform.position = position + Vector3.up * 0.05f;
             IsAlive = true;
             _stagger = 0f;
+            _stuckTimer = 0f;
+            _stuckSamplePos = transform.position;
+            _stuckSampleAt = Time.time + 0.4f;
+            _slideSign = Random.value < 0.5f ? -1f : 1f;
+            _nextRescue = 0f;
             _nextAttack = Time.time + 0.75f;
             _nextGroan = Time.time + Random.Range(1.2f, 4.5f);
             _controller.enabled = true;
@@ -79,6 +89,24 @@ namespace ShikiShiro
             _visual.localPosition = Vector3.zero;
             ApplyKind(kind);
             gameObject.SetActive(true);
+        }
+
+        public void Warp(Vector3 position)
+        {
+            if (_controller != null)
+            {
+                _controller.enabled = false;
+            }
+
+            transform.position = position + Vector3.up * 0.05f;
+            _stuckTimer = 0f;
+            _stuckSamplePos = transform.position;
+            _stuckSampleAt = Time.time + 0.5f;
+            _nextRescue = Time.time + 2.5f;
+            if (_controller != null)
+            {
+                _controller.enabled = true;
+            }
         }
 
         public void ApplyDamage(in DamageInfo info)
@@ -110,6 +138,11 @@ namespace ShikiShiro
                 return;
             }
 
+            if (_session != null && _session.State != SessionState.Playing)
+            {
+                return;
+            }
+
             _bob += Time.deltaTime * (_moveSpeed * 1.4f);
             _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(_bob)) * 0.03f, 0f);
             _visual.localRotation = Quaternion.identity;
@@ -125,24 +158,21 @@ namespace ShikiShiro
             float vertical = Mathf.Abs(to.y);
             to.y = 0f;
             float dist = to.magnitude;
-            if (vertical > 2.4f)
+            if (vertical > 1.8f)
             {
-                if (transform.position.y < _target.position.y - 1.5f)
-                {
-                    _controller.enabled = false;
-                    Vector3 p = transform.position;
-                    p.y = _target.position.y;
-                    transform.position = p;
-                    _controller.enabled = true;
-                }
-
-                return;
+                TryRescue();
             }
 
             bool chasing = dist > _attackRange * 0.92f;
             if (chasing)
             {
                 Vector3 dir = to / Mathf.Max(dist, 0.05f);
+                if (_stuckTimer > 1.1f)
+                {
+                    float yaw = Mathf.Lerp(40f, 100f, Mathf.InverseLerp(1.1f, 3.2f, _stuckTimer));
+                    dir = Quaternion.Euler(0f, yaw * _slideSign, 0f) * dir;
+                }
+
                 AvoidNeighbors(ref dir);
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
                 Vector3 motion = dir * _moveSpeed + Vector3.down * 8f;
@@ -152,6 +182,12 @@ namespace ShikiShiro
                     _sfx.PlayGroan();
                     _nextGroan = Time.time + Random.Range(2.8f, 7.5f);
                 }
+            }
+
+            SampleStuck(chasing, dist);
+            if (_horde != null && !_horde.IsInside(transform.position))
+            {
+                TryRescue();
             }
 
             bool swing = false;
@@ -198,6 +234,59 @@ namespace ShikiShiro
             }
 
             return hit.collider.transform == _target || hit.collider.transform.IsChildOf(_target);
+        }
+
+        private void SampleStuck(bool chasing, float dist)
+        {
+            if (!chasing || dist < _attackRange * 1.5f)
+            {
+                _stuckTimer = 0f;
+                _stuckSamplePos = transform.position;
+                return;
+            }
+
+            if (Time.time < _stuckSampleAt)
+            {
+                return;
+            }
+
+            Vector3 pos = transform.position;
+            Vector2 delta = new Vector2(pos.x - _stuckSamplePos.x, pos.z - _stuckSamplePos.z);
+            if (delta.sqrMagnitude < 0.45f * 0.45f)
+            {
+                _stuckTimer += 0.4f;
+                if (_stuckTimer > 2.2f)
+                {
+                    _slideSign = -_slideSign;
+                }
+
+                if (_stuckTimer > 3.8f)
+                {
+                    TryRescue();
+                    if (_stuckTimer <= 0f)
+                    {
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                _stuckTimer = Mathf.Max(0f, _stuckTimer - 0.55f);
+            }
+
+            _stuckTimer = Mathf.Min(_stuckTimer, 6f);
+            _stuckSamplePos = pos;
+            _stuckSampleAt = Time.time + 0.4f;
+        }
+
+        private void TryRescue()
+        {
+            if (_horde == null || Time.time < _nextRescue)
+            {
+                return;
+            }
+
+            _horde.Rescue(this);
         }
 
         private void AvoidNeighbors(ref Vector3 dir)

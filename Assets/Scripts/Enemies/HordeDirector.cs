@@ -51,6 +51,28 @@ namespace ShikiShiro
             _alive = Mathf.Max(0, _alive - 1);
         }
 
+        public void Rescue(ZombieAgent agent)
+        {
+            if (agent == null || !agent.IsAlive)
+            {
+                return;
+            }
+
+            Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
+            if (!_arena.Contains(origin, 2f))
+            {
+                origin = _arena.SpawnPoint;
+            }
+
+            Vector3 pos = PlaceAround(origin, 8f, 16f);
+            agent.Warp(pos);
+        }
+
+        public bool IsInside(Vector3 point)
+        {
+            return _arena == null || _arena.Contains(point, 0.8f);
+        }
+
         public void Despawn(ZombieAgent agent)
         {
             _zombies.Release(agent);
@@ -97,6 +119,11 @@ namespace ShikiShiro
             int nextDepth = info.ChainDepth + 1;
             for (int i = 0; i < victims.Count; i++)
             {
+                if (_session.State != SessionState.Playing)
+                {
+                    yield break;
+                }
+
                 yield return new WaitForSeconds(0.045f);
                 ZombieAgent z = victims[i];
                 if (z == null || !z.IsAlive)
@@ -228,6 +255,11 @@ namespace ShikiShiro
                     p.y = origin.y;
                 }
 
+                if (!_arena.IsStreet(p))
+                {
+                    p = _arena.SnapToStreet(p);
+                }
+
                 if (Mathf.Abs(p.y - origin.y) > 2.5f)
                 {
                     continue;
@@ -239,9 +271,7 @@ namespace ShikiShiro
                     continue;
                 }
 
-                float limit = _arena.Radius * 0.86f;
-                Vector2 xz = new Vector2(p.x - _arena.SpawnPoint.x, p.z - _arena.SpawnPoint.z);
-                if (xz.magnitude > limit)
+                if (!_arena.Contains(p, 2.2f))
                 {
                     continue;
                 }
@@ -254,9 +284,21 @@ namespace ShikiShiro
                 return p;
             }
 
-            Vector3 fallback = origin + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 24f;
-            fallback.y = origin.y;
-            return fallback;
+            int obstacle = LayerMask.GetMask("Obstacle");
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 fallback = _arena.SnapToStreet(origin + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(12f, 22f));
+                fallback.y = origin.y;
+                fallback = _arena.ClampInside(fallback, 2.2f);
+                if (!Physics.CheckCapsule(fallback + Vector3.up * 0.6f, fallback + Vector3.up * 1.6f, 0.4f, obstacle, QueryTriggerInteraction.Ignore))
+                {
+                    return fallback;
+                }
+            }
+
+            Vector3 safe = _arena.SnapToStreet(_arena.SpawnPoint + Vector3.back * 8f);
+            safe.y = origin.y;
+            return safe;
         }
 
         private static ZombieKind SelectKind(int wave)

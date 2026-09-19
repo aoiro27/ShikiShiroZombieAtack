@@ -34,6 +34,7 @@ namespace ShikiShiro
 
         public Vector3 SpawnPoint { get; private set; } = new Vector3(0f, 0.2f, 0f);
         public float Radius { get; private set; } = 72f;
+        public float PlayHalf { get; private set; } = 72f;
 
         public ArenaBuilder(Transform root)
         {
@@ -44,10 +45,11 @@ namespace ShikiShiro
 
         public void Build()
         {
+            int last = StreetCount / 2;
             _block = BuildingsPerEdge * BuildingWidth;
             _pitch = _block + RoadWidth;
-            int last = StreetCount / 2;
-            Radius = last * _pitch + RoadWidth + 8f;
+            PlayHalf = last * _pitch + RoadWidth * 0.5f + 1.15f;
+            Radius = PlayHalf;
             SpawnPoint = new Vector3(0f, GroundTop + 0.12f, 0f);
             CreateGround(true);
             CreatePerimeter();
@@ -85,6 +87,26 @@ namespace ShikiShiro
             return SpawnPoint + new Vector3(0f, 0f, -8f);
         }
 
+        public bool Contains(Vector3 point, float padding = 1f)
+        {
+            float h = Mathf.Max(4f, PlayHalf - padding);
+            return Mathf.Abs(point.x - SpawnPoint.x) <= h && Mathf.Abs(point.z - SpawnPoint.z) <= h
+                && point.y > SpawnPoint.y - 2f && point.y < SpawnPoint.y + 10f;
+        }
+
+        public Vector3 ClampInside(Vector3 point, float padding = 1.4f)
+        {
+            float h = Mathf.Max(4f, PlayHalf - padding);
+            point.x = Mathf.Clamp(point.x, SpawnPoint.x - h, SpawnPoint.x + h);
+            point.z = Mathf.Clamp(point.z, SpawnPoint.z - h, SpawnPoint.z + h);
+            if (point.y < SpawnPoint.y - 0.2f || point.y > SpawnPoint.y + 6f)
+            {
+                point.y = SpawnPoint.y;
+            }
+
+            return SnapToStreet(point);
+        }
+
         private void CreateGround(bool colliderOnly)
         {
             var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -93,7 +115,7 @@ namespace ShikiShiro
             ground.layer = groundLayer >= 0 ? groundLayer : 0;
             ground.transform.SetParent(_root, false);
             float thickness = 0.8f;
-            ground.transform.localScale = new Vector3(Radius * 2.4f, thickness, Radius * 2.4f);
+            ground.transform.localScale = new Vector3(PlayHalf * 2f + 2f, thickness, PlayHalf * 2f + 2f);
             ground.transform.position = new Vector3(SpawnPoint.x, GroundTop - thickness * 0.5f, SpawnPoint.z);
             var renderer = ground.GetComponent<MeshRenderer>();
             renderer.enabled = !colliderOnly;
@@ -105,14 +127,17 @@ namespace ShikiShiro
 
         private void CreatePerimeter()
         {
-            float wallH = 6f;
-            float thick = 2.2f;
-            float span = Radius * 2.2f;
+            float wallH = 22f;
+            float thick = 4.2f;
+            float inner = PlayHalf;
+            float center = inner + thick * 0.5f;
+            float span = (inner + thick) * 2f;
             Vector3 c = SpawnPoint;
-            CreateBox("WallN", new Vector3(c.x, c.y + wallH * 0.5f, c.z + Radius), new Vector3(span, wallH, thick), _brick);
-            CreateBox("WallS", new Vector3(c.x, c.y + wallH * 0.5f, c.z - Radius), new Vector3(span, wallH, thick), _brick);
-            CreateBox("WallE", new Vector3(c.x + Radius, c.y + wallH * 0.5f, c.z), new Vector3(thick, wallH, span), _brick);
-            CreateBox("WallW", new Vector3(c.x - Radius, c.y + wallH * 0.5f, c.z), new Vector3(thick, wallH, span), _brick);
+            var wallMat = MaterialFactory.Create(new Color(0.16f, 0.12f, 0.11f), 0.02f, 0.08f);
+            CreateBox("WallN", new Vector3(c.x, wallH * 0.5f, c.z + center), new Vector3(span, wallH, thick), wallMat, true);
+            CreateBox("WallS", new Vector3(c.x, wallH * 0.5f, c.z - center), new Vector3(span, wallH, thick), wallMat, true);
+            CreateBox("WallE", new Vector3(c.x + center, wallH * 0.5f, c.z), new Vector3(thick, wallH, span), wallMat, true);
+            CreateBox("WallW", new Vector3(c.x - center, wallH * 0.5f, c.z), new Vector3(thick, wallH, span), wallMat, true);
         }
 
         private void PlaceCourtyards()
@@ -205,12 +230,84 @@ namespace ShikiShiro
                 SpawnBuilding(new Vector3(cx - front, 0f, cz + along), Vector3.left, h + 0.3f);
                 SpawnBuilding(new Vector3(cx + front, 0f, cz + along), Vector3.right, h + 0.9f);
             }
+
+            SealBlock(cx, cz, front);
+        }
+
+        private void SealBlock(float cx, float cz, float front)
+        {
+            float h = 14f;
+            float thick = BuildingDepth * 0.9f;
+            float span = _block;
+            CreateBox("SealS", new Vector3(cx, h * 0.5f, cz - front), new Vector3(span, h, thick), _brick, false);
+            CreateBox("SealN", new Vector3(cx, h * 0.5f, cz + front), new Vector3(span, h, thick), _brick, false);
+            CreateBox("SealW", new Vector3(cx - front, h * 0.5f, cz), new Vector3(thick, h, span), _brick, false);
+            CreateBox("SealE", new Vector3(cx + front, h * 0.5f, cz), new Vector3(thick, h, span), _brick, false);
+        }
+
+        public bool IsStreet(Vector3 point)
+        {
+            return StreetOffset(point) <= RoadWidth * 0.46f;
+        }
+
+        public Vector3 SnapToStreet(Vector3 point)
+        {
+            NearestStreet(point, out float nx, out float nz, out float dx, out float dz);
+            if (dx <= dz)
+            {
+                point.x = nx;
+            }
+            else
+            {
+                point.z = nz;
+            }
+
+            return point;
+        }
+
+        private float StreetOffset(Vector3 point)
+        {
+            NearestStreet(point, out _, out _, out float dx, out float dz);
+            return Mathf.Min(dx, dz);
+        }
+
+        private void NearestStreet(Vector3 point, out float nearestX, out float nearestZ, out float dx, out float dz)
+        {
+            int last = StreetCount / 2;
+            nearestX = 0f;
+            nearestZ = 0f;
+            dx = float.MaxValue;
+            dz = float.MaxValue;
+            for (int s = -last; s <= last; s++)
+            {
+                float street = s * _pitch;
+                float xDist = Mathf.Abs(point.x - street);
+                if (xDist < dx)
+                {
+                    dx = xDist;
+                    nearestX = street;
+                }
+
+                float zDist = Mathf.Abs(point.z - street);
+                if (zDist < dz)
+                {
+                    dz = zDist;
+                    nearestZ = street;
+                }
+            }
         }
 
         private void SpawnBuilding(Vector3 position, Vector3 face, float height)
         {
             string kit = _kits[_kit++ % _kits.Length];
-            GameAssets.SpawnProp(kit, _root, position, Quaternion.LookRotation(face), true, height);
+            GameObject go = GameAssets.SpawnProp(kit, _root, position, Quaternion.LookRotation(face), false, height);
+            if (go == null)
+            {
+                return;
+            }
+
+            GameAssets.FitFootprint(go, BuildingWidth + 0.55f, BuildingDepth + 0.2f);
+            GameAssets.MakeObstacle(go, 18f);
         }
 
         private void SpawnRoad(string path, Vector3 position, Quaternion rotation)
@@ -300,7 +397,7 @@ namespace ShikiShiro
             }
         }
 
-        private void CreateBox(string name, Vector3 position, Vector3 scale, Material material)
+        private void CreateBox(string name, Vector3 position, Vector3 scale, Material material, bool visible)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -309,7 +406,12 @@ namespace ShikiShiro
             go.transform.SetParent(_root, false);
             go.transform.position = position;
             go.transform.localScale = scale;
-            go.GetComponent<MeshRenderer>().enabled = false;
+            var renderer = go.GetComponent<MeshRenderer>();
+            renderer.enabled = visible;
+            if (visible && material != null)
+            {
+                renderer.sharedMaterial = material;
+            }
         }
     }
 }

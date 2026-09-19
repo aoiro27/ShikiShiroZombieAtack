@@ -88,6 +88,7 @@ namespace ShikiShiro
             var world = new GameObject("World").transform;
             var arena = new ArenaBuilder(world);
             arena.Build();
+            motor.BindArena(arena);
             Physics.SyncTransforms();
             var cc = playerGo.GetComponent<CharacterController>();
             if (cc != null)

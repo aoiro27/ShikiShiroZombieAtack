@@ -98,6 +98,7 @@ namespace ShikiShiro
             }
 
             SetState(SessionState.GameOver);
+            Time.timeScale = 0f;
             PlayerDied?.Invoke();
         }
 

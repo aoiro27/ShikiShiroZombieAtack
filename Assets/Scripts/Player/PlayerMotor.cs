@@ -11,6 +11,7 @@ namespace ShikiShiro
         private CharacterController _controller;
         private GameInput _input;
         private GameConfig _config;
+        private ArenaBuilder _arena;
         private float _verticalVelocity;
         private float _recoilPitch;
 
@@ -24,6 +25,8 @@ namespace ShikiShiro
             _controller.center = new Vector3(0f, 0.9f, 0f);
             _controller.minMoveDistance = 0f;
             _controller.slopeLimit = 45f;
+            _controller.stepOffset = 0.28f;
+            _controller.skinWidth = 0.08f;
 
             GameObject visual = GameAssets.AttachCharacter(transform, GameAssets.Player, GameAssets.ZombieAtlas);
             if (visual == null)
@@ -42,6 +45,11 @@ namespace ShikiShiro
             head.transform.SetParent(transform, false);
             head.transform.localPosition = new Vector3(0f, 1.62f, 0f);
             Head = head.transform;
+        }
+
+        public void BindArena(ArenaBuilder arena)
+        {
+            _arena = arena;
         }
 
         public void HideBody()
@@ -70,7 +78,7 @@ namespace ShikiShiro
 
         private void Update()
         {
-            if (_input == null)
+            if (_input == null || Time.timeScale <= 0.001f)
             {
                 return;
             }
@@ -117,6 +125,26 @@ namespace ShikiShiro
 
             Vector3 velocity = planar * speed + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
+            ConstrainToArena();
+        }
+
+        private void ConstrainToArena()
+        {
+            if (_arena == null || _controller == null)
+            {
+                return;
+            }
+
+            Vector3 p = transform.position;
+            if (_arena.Contains(p, 0.6f))
+            {
+                return;
+            }
+
+            _controller.enabled = false;
+            transform.position = _arena.ClampInside(p, 1.6f);
+            _controller.enabled = true;
+            _verticalVelocity = -2f;
         }
     }
 }

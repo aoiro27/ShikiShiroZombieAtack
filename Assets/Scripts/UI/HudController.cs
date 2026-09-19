@@ -293,6 +293,14 @@ namespace ShikiShiro
         {
             if (state == SessionState.GameOver)
             {
+                Time.timeScale = 0f;
+                _paused = false;
+                if (_pauseGroup != null)
+                {
+                    _pauseGroup.alpha = 0f;
+                    _pauseGroup.blocksRaycasts = false;
+                }
+
                 _gameOver.gameObject.SetActive(true);
                 _gameOver.text = $"GAME OVER\nWAVE {_session.Wave}   KILLS {_session.Kills}\nSCORE {_session.Score}\nタップ / クリックで再開";
             }

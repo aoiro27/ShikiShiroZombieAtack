@@ -180,6 +180,10 @@ namespace ShikiShiro
 
         public void KillPunch(float scale)
         {
+            if (Time.timeScale <= 0.001f)
+            {
+                return;
+            }
             TpsCamera cam = Camera.main != null ? Camera.main.GetComponent<TpsCamera>() : null;
             cam?.Shake(0.32f * scale, 0.28f);
             if (_hitstop != null)
@@ -388,11 +392,13 @@ namespace ShikiShiro
             float previous = Time.timeScale;
             Time.timeScale = scale;
             yield return new WaitForSecondsRealtime(duration);
-            if (Time.timeScale > 0.001f)
+            if (Time.timeScale <= 0.001f)
             {
-                Time.timeScale = previous <= 0.001f ? 1f : previous;
+                _hitstop = null;
+                yield break;
             }
 
+            Time.timeScale = previous <= 0.001f ? 1f : previous;
             _hitstop = null;
         }
 
