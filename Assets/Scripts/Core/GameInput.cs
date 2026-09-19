@@ -35,23 +35,9 @@ namespace ShikiShiro
         private void Update()
         {
             Vector2 move = _moveStick != null ? _moveStick.Value : Vector2.zero;
-            Vector2 look = _lookStick != null ? _lookStick.Value : Vector2.zero;
-
-            if (Application.isEditor || Input.GetJoystickNames().Length > 0)
-            {
-                move += new Vector2(KeyboardAxis(KeyCode.A, KeyCode.D), KeyboardAxis(KeyCode.S, KeyCode.W));
-                if (Input.GetMouseButton(1) || Input.GetKey(KeyCode.Mouse1))
-                {
-                    look += new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"));
-                }
-                else if (!HasActiveTouch())
-                {
-                    look += new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"));
-                }
-            }
-
+            move += new Vector2(KeyboardAxis(KeyCode.A, KeyCode.D), KeyboardAxis(KeyCode.S, KeyCode.W));
             Move = Vector2.ClampMagnitude(move, 1f);
-            Look = look;
+            Look = _lookStick != null ? _lookStick.Value : Vector2.zero;
             FireHeld = _touchFire || Input.GetKey(KeyCode.Mouse0) || Input.GetKey(KeyCode.Space);
             ReloadPressed = _touchReload || Input.GetKeyDown(KeyCode.R);
             SprintHeld = _touchSprint || Input.GetKey(KeyCode.LeftShift);
@@ -79,9 +65,9 @@ namespace ShikiShiro
             return v;
         }
 
-        private static bool HasActiveTouch()
+        public static Vector2 MouseDelta()
         {
-            return Input.touchCount > 0;
+            return Input.mousePositionDelta;
         }
     }
 }

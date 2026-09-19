@@ -314,7 +314,11 @@ namespace ShikiShiro
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             var text = go.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (text.font == null)
+            {
+                text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
             text.fontSize = fontSize;
             text.alignment = anchor;
             text.color = Color.white;

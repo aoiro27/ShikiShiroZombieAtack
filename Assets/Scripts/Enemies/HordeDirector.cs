@@ -15,7 +15,6 @@ namespace ShikiShiro
         private ObjectPool<WorldPickup> _pickups;
         private int _remainingToSpawn;
         private int _alive;
-        private bool _waveActive;
         private HudController _hud;
 
         public void Initialize(GameConfig config, GameSession session, ArenaBuilder arena, Transform player, CombatFx fx, ProceduralSfx sfx, HudController hud)
@@ -55,7 +54,7 @@ namespace ShikiShiro
         public void DropPickup(Vector3 position)
         {
             WorldPickup pickup = _pickups.Get();
-            pickup.Setup(Random.value < 0.4f ? PickupKind.Medkit : PickupKind.Ammo, position, _player);
+            pickup.Setup(Random.value < 0.4f ? PickupKind.Medkit : PickupKind.Ammo, position, _player, _sfx);
         }
 
         private IEnumerator RunWaves()
@@ -65,7 +64,6 @@ namespace ShikiShiro
                 int wave = _session.Wave;
                 _remainingToSpawn = 6 + wave * 4 + (wave >= 5 ? wave : 0);
                 _alive = 0;
-                _waveActive = true;
                 _hud.Announce($"WAVE {wave}");
                 _sfx.PlayRoar();
 
@@ -93,7 +91,6 @@ namespace ShikiShiro
                     yield break;
                 }
 
-                _waveActive = false;
                 _session.NotifyWaveClear();
                 _hud.Announce("エリア確保");
                 yield return new WaitForSeconds(4.5f);

@@ -8,11 +8,13 @@ namespace ShikiShiro
 
         private float _life = 22f;
         private Transform _player;
+        private ProceduralSfx _sfx;
 
-        public void Setup(PickupKind kind, Vector3 position, Transform player)
+        public void Setup(PickupKind kind, Vector3 position, Transform player, ProceduralSfx sfx)
         {
             Kind = kind;
             _player = player;
+            _sfx = sfx;
             transform.position = position + Vector3.up * 0.45f;
             gameObject.SetActive(true);
             _life = 22f;
@@ -52,7 +54,7 @@ namespace ShikiShiro
                     weapons.AddAmmo(weapons.Current.MagazineSize * 2);
                 }
 
-                FindObjectOfType<ProceduralSfx>()?.PlayPickup();
+                _sfx?.PlayPickup();
                 gameObject.SetActive(false);
             }
         }

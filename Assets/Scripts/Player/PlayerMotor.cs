@@ -58,9 +58,18 @@ namespace ShikiShiro
                 return;
             }
 
-            float lookScale = HasTouchLook() ? _config.PlayerLookSensitivity : _config.EditorLookSensitivity * 80f;
-            Yaw += _input.Look.x * lookScale * Time.deltaTime;
-            Pitch -= _input.Look.y * lookScale * Time.deltaTime;
+            Vector2 look = _input.Look;
+            if (look.sqrMagnitude > 0.0001f)
+            {
+                Yaw += look.x * _config.PlayerLookSensitivity * Time.deltaTime;
+                Pitch -= look.y * _config.PlayerLookSensitivity * Time.deltaTime;
+            }
+            else
+            {
+                Vector2 mouse = GameInput.MouseDelta();
+                Yaw += mouse.x * _config.EditorLookSensitivity;
+                Pitch -= mouse.y * _config.EditorLookSensitivity;
+            }
             _recoilPitch = Mathf.MoveTowards(_recoilPitch, 0f, Time.deltaTime * 18f);
             Pitch = Mathf.Clamp(Pitch + _recoilPitch * Time.deltaTime, -55f, 70f);
             transform.rotation = Quaternion.Euler(0f, Yaw, 0f);
@@ -85,9 +94,5 @@ namespace ShikiShiro
             _controller.Move(velocity * Time.deltaTime);
         }
 
-        private bool HasTouchLook()
-        {
-            return Input.touchCount > 0;
-        }
     }
 }

@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace ShikiShiro
 {
+    [DefaultExecutionOrder(-100)]
     public sealed class Bootstrap : MonoBehaviour
     {
         private void Awake()
@@ -9,6 +10,11 @@ namespace ShikiShiro
             Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
             QualitySettings.vSyncCount = 0;
+
+            foreach (Camera existing in FindObjectsOfType<Camera>())
+            {
+                existing.gameObject.SetActive(false);
+            }
 
             var config = new GameConfig();
             var services = new GameObject("Systems");
@@ -67,6 +73,8 @@ namespace ShikiShiro
 
             var horde = services.AddComponent<HordeDirector>();
             horde.Initialize(config, session, arena, playerGo.transform, fx, sfx, hud);
+
+            services.AddComponent<RestartOnTap>().Bind(session);
 
             session.BeginRun();
             horde.StartWaves();

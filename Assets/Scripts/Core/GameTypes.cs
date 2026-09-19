@@ -60,7 +60,7 @@ namespace ShikiShiro
         public float PlayerMoveSpeed = 5.4f;
         public float PlayerSprintMultiplier = 1.45f;
         public float PlayerLookSensitivity = 110f;
-        public float EditorLookSensitivity = 2.4f;
+        public float EditorLookSensitivity = 0.16f;
         public float PlayerMaxHealth = 100f;
         public float CameraDistance = 3.6f;
         public float CameraHeight = 1.55f;

@@ -12,7 +12,6 @@ namespace ShikiShiro
         public Vector2 Value { get; private set; }
 
         private RectTransform _root;
-        private Canvas _canvas;
         private Vector2 _pointerStart;
         private bool _held;
 
@@ -21,7 +20,6 @@ namespace ShikiShiro
             _handle = handle;
             _radius = radius;
             _root = (RectTransform)transform;
-            _canvas = GetComponentInParent<Canvas>();
         }
 
         public void OnPointerDown(PointerEventData eventData)
