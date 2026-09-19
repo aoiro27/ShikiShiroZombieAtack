@@ -57,15 +57,16 @@ namespace ShikiShiro
     [System.Serializable]
     public sealed class GameConfig
     {
-        public float PlayerMoveSpeed = 5.4f;
-        public float PlayerSprintMultiplier = 1.45f;
+        public float PlayerMoveSpeed = 6.6f;
+        public float PlayerSprintMultiplier = 1.5f;
         public float PlayerLookSensitivity = 110f;
-        public float EditorLookSensitivity = 0.16f;
+        public float GyroLookSensitivity = 1f;
+        public float EditorLookSensitivity = 0.18f;
         public float PlayerMaxHealth = 100f;
         public float CameraDistance = 3.6f;
         public float CameraHeight = 1.55f;
         public float CameraCollisionRadius = 0.22f;
-        public int MaxAliveZombies = 36;
+        public int MaxAliveZombies = 18;
         public int ZombiePoolSize = 48;
         public float PickupDropChance = 0.18f;
         public string HighScoreKey = "ssza.highscore";

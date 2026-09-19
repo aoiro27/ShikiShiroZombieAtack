@@ -1,8 +1,45 @@
-Visual models and textures are Kenney 3D packs (CC0 1.0), also published on the Unity Asset Store:
+Visual models (CC0, Unity-ready):
 
-- Animated Characters 3  https://kenney.nl/assets/animated-characters-3
-- City Kit (Industrial)  https://kenney.nl/assets/city-kit-industrial
-- City Kit (Roads)       https://kenney.nl/assets/city-kit-roads
-- Blaster Kit            https://kenney.nl/assets/blaster-kit
+- Quaternius Zombie Apocalypse Kit
+  https://quaternius.com/packs/zombieapocalypsekit.html
+  Zombies: Basic / Arm / Chubby, survivor Matt, shared atlas
 
-Credit (optional): Kenney.nl
+- KayKit City Builder Bits
+  https://github.com/KayKit-Game-Assets/KayKit-City-Builder-Bits-1.0
+  Buildings, roads, cars, dumpsters, street lights
+
+- Kenney Impact Sounds, Sci-Fi Sounds, RPG Audio (CC0)
+  https://kenney.nl/assets/impact-sounds
+  https://kenney.nl/assets/sci-fi-sounds
+  https://kenney.nl/assets/rpg-audio
+  Guns/flesh/impact/explosion: Assets/Resources/Sfx
+    laserLarge_*.ogg, laserRetro_*.ogg, laserSmall_*.ogg (銃声)
+    explosionCrunch_*.ogg, lowFrequency_explosion_*.ogg (爆発・ショットガン)
+    impact*_*.ogg, chop.ogg, knifeSlice.ogg, slime_*.ogg (ヒット)
+
+- OpenGameArt zombie voices (CC0)
+  Darsycho "Zombie moans" https://opengameart.org/content/zombie-moans
+  ianzazz "Zombie noises and moans" https://opengameart.org/content/zombie-noises-and-moans
+  artisticdude "Zombies Sound Pack" https://opengameart.org/content/zombies-sound-pack
+  Assets/Resources/Voice
+
+- OpenGameArt BGM (CC0)
+  congusbongus "Ancient caverns" https://opengameart.org/content/ancient-caverns-horror-ambient-loop
+    Assets/Resources/Bgm/bgm_horror.ogg
+  epb9000 "Creepy Ambient Loop" https://opengameart.org/content/creepy-ambient-loop
+    Assets/Resources/Bgm/bgm_creepy.ogg
+
+- Kenney Game Icons / Shooting Gallery HUD (CC0)
+  https://kenney.nl/assets/game-icons
+  https://kenney.nl/assets/shooting-gallery
+  Fire button artwork in Assets/Resources/Ui
+
+Unity Asset Store (standard EULA), imported into Assets/:
+
+- Demo City By Versatile Studio
+- FREE Shirtless Zombie / FREE Zombie Male AAB (Studio New Punch)
+- FPS Gun 4K - Assault Rifle 1 (Heart State Games)
+- Character Pack: Zombie Sample (Supercyan)
+- Low Poly Street Pack (Dynamic Art)
+- Cartoon Low Poly City Pack Lite / Low Poly FPS Weapons Lite (JustCreate)
+- Low Poly Road Pack (Broken Vector)

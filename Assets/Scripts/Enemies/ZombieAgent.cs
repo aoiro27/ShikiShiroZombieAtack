@@ -14,6 +14,9 @@ namespace ShikiShiro
         private CombatFx _fx;
         private ProceduralSfx _sfx;
         private HordeDirector _horde;
+        private PlayerVitality _playerVitality;
+        private static Collider[] NeighborBuffer;
+        private static int ZombieMask = -1;
         private float _health;
         private float _maxHealth;
         private float _moveSpeed;
@@ -21,13 +24,17 @@ namespace ShikiShiro
         private float _attackRange;
         private float _attackCooldown;
         private float _nextAttack;
+        private float _nextGroan;
         private float _stagger;
         private float _despawnAt;
         private float _bob;
-        private Color _baseColor;
+        private ZombieBodyMotion _motion;
         private Renderer[] _renderers;
-        private readonly MaterialPropertyBlock _flashBlock = new MaterialPropertyBlock();
+        private MaterialPropertyBlock _flashBlock;
         private Texture2D _skin;
+        private GameObject _walkerVisual;
+        private GameObject _runnerVisual;
+        private GameObject _bruteVisual;
 
         public void BuildVisual()
         {
@@ -36,30 +43,19 @@ namespace ShikiShiro
             _controller.radius = 0.38f;
             _controller.center = new Vector3(0f, 0.9f, 0f);
             _controller.minMoveDistance = 0f;
-            gameObject.layer = LayerMask.NameToLayer("Zombie");
-            gameObject.tag = "Zombie";
+            int zombieLayer = LayerMask.NameToLayer("Zombie");
+            gameObject.layer = zombieLayer >= 0 ? zombieLayer : 0;
+            try
+            {
+                gameObject.tag = "Zombie";
+            }
+            catch (UnityException)
+            {
+            }
 
             _visual = new GameObject("Visual").transform;
             _visual.SetParent(transform, false);
-
-            GameObject character = GameAssets.AttachCharacter(_visual, GameAssets.SkinWalker);
-            if (character == null)
-            {
-                var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                body.name = "Body";
-                body.transform.SetParent(_visual, false);
-                body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-                Destroy(body.GetComponent<Collider>());
-
-                var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                head.name = "Head";
-                head.transform.SetParent(_visual, false);
-                head.transform.localPosition = new Vector3(0f, 1.72f, 0.05f);
-                head.transform.localScale = Vector3.one * 0.42f;
-                Destroy(head.GetComponent<Collider>());
-            }
-
-            _renderers = _visual.GetComponentsInChildren<Renderer>();
+            _motion = new ZombieBodyMotion();
             GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
         }
 
@@ -71,10 +67,14 @@ namespace ShikiShiro
             _fx = fx;
             _sfx = sfx;
             _horde = horde;
+            _playerVitality = target.GetComponent<PlayerVitality>();
+            _controller.enabled = false;
             transform.position = position + Vector3.up * 0.05f;
             IsAlive = true;
             _stagger = 0f;
             _despawnAt = 0f;
+            _nextAttack = Time.time + 0.75f;
+            _nextGroan = Time.time + Random.Range(1.2f, 4.5f);
             _controller.enabled = true;
             _visual.localScale = Vector3.one;
             ApplyKind(kind);
@@ -89,12 +89,18 @@ namespace ShikiShiro
             }
 
             _health -= info.Amount;
-            _fx.Blood(info.Point);
-            _stagger = info.IsHeadshot ? 0.35f : 0.12f;
+            _fx.Blood(info.Point, info.Direction, info.IsHeadshot);
+            _sfx.PlayFlesh(info.IsHeadshot);
+            if (info.IsHeadshot)
+            {
+                _sfx.PlayBoom();
+            }
+
+            _stagger = info.IsHeadshot ? 0.45f : 0.12f;
             Flash(info.IsHeadshot ? Color.white : new Color(1f, 0.4f, 0.4f));
             if (_health <= 0f)
             {
-                Die(info.IsHeadshot);
+                Die(info);
             }
         }
 
@@ -115,52 +121,112 @@ namespace ShikiShiro
                 return;
             }
 
-            _bob += Time.deltaTime * (_moveSpeed * 2.2f);
-            _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(_bob)) * 0.05f, 0f);
-            _visual.localRotation = Quaternion.Euler(8f, 0f, Mathf.Sin(_bob) * 4f);
+            _bob += Time.deltaTime * (_moveSpeed * 1.4f);
+            _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(_bob)) * 0.03f, 0f);
+            _visual.localRotation = Quaternion.identity;
 
             if (_stagger > 0f)
             {
                 _stagger -= Time.deltaTime;
+                _motion?.Tick(false, false, false, 0f);
                 return;
             }
 
             Vector3 to = _target.position - transform.position;
+            float vertical = Mathf.Abs(to.y);
             to.y = 0f;
             float dist = to.magnitude;
-            if (dist > 0.05f)
+            if (vertical > 2.4f)
             {
-                Vector3 dir = to / dist;
-                AvoidNeighbors(ref dir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 8f);
-                Vector3 motion = dir * _moveSpeed + Vector3.down * 8f;
-                _controller.Move(motion * Time.deltaTime);
+                if (transform.position.y < _target.position.y - 1.5f)
+                {
+                    _controller.enabled = false;
+                    Vector3 p = transform.position;
+                    p.y = _target.position.y;
+                    transform.position = p;
+                    _controller.enabled = true;
+                }
+
+                return;
             }
 
-            if (dist <= _attackRange && Time.time >= _nextAttack)
+            bool chasing = dist > _attackRange * 0.92f;
+            if (chasing)
+            {
+                Vector3 dir = to / Mathf.Max(dist, 0.05f);
+                AvoidNeighbors(ref dir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
+                Vector3 motion = dir * _moveSpeed + Vector3.down * 8f;
+                _controller.Move(motion * Time.deltaTime);
+                if (Time.time >= _nextGroan)
+                {
+                    _sfx.PlayGroan();
+                    _nextGroan = Time.time + Random.Range(2.8f, 7.5f);
+                }
+            }
+
+            bool swing = false;
+            if (dist <= _attackRange && Time.time >= _nextAttack && CanSeeTarget())
             {
                 _nextAttack = Time.time + _attackCooldown;
-                var vitality = _target.GetComponent<PlayerVitality>();
-                if (vitality != null && vitality.IsAlive)
+                swing = true;
+                if (_playerVitality != null && _playerVitality.IsAlive)
                 {
-                    vitality.ApplyDamage(new DamageInfo(_damage, _target.position + Vector3.up, transform.forward, false, WeaponId.Pistol));
+                    _playerVitality.ApplyDamage(new DamageInfo(_damage, _target.position + Vector3.up, transform.forward, false, WeaponId.Pistol));
                     _sfx.PlayHit();
                 }
             }
+
+            _motion?.Tick(chasing, swing, false, _moveSpeed);
+        }
+
+        private bool CanSeeTarget()
+        {
+            Vector3 from = transform.position + Vector3.up * 1.15f;
+            Vector3 to = _target.position + Vector3.up * 1.15f;
+            Vector3 delta = to - from;
+            float len = delta.magnitude;
+            if (len < 0.05f)
+            {
+                return true;
+            }
+
+            int mask = LayerMask.GetMask("Obstacle", "Ground", "Player");
+            if (mask == 0)
+            {
+                mask = ~0;
+            }
+
+            if (!Physics.Raycast(from, delta / len, out RaycastHit hit, len + 0.05f, mask, QueryTriggerInteraction.Ignore))
+            {
+                return true;
+            }
+
+            return hit.collider.transform == _target || hit.collider.transform.IsChildOf(_target);
         }
 
         private void AvoidNeighbors(ref Vector3 dir)
         {
-            Vector3 sep = Vector3.zero;
-            Collider[] hits = Physics.OverlapSphere(transform.position, 1.1f, LayerMask.GetMask("Zombie"));
-            for (int i = 0; i < hits.Length; i++)
+            if (ZombieMask < 0)
             {
-                if (hits[i].transform == transform)
+                ZombieMask = LayerMask.GetMask("Zombie");
+            }
+
+            if (NeighborBuffer == null)
+            {
+                NeighborBuffer = new Collider[16];
+            }
+
+            Vector3 sep = Vector3.zero;
+            int count = Physics.OverlapSphereNonAlloc(transform.position, 1.1f, NeighborBuffer, ZombieMask);
+            for (int i = 0; i < count; i++)
+            {
+                if (NeighborBuffer[i].transform == transform)
                 {
                     continue;
                 }
 
-                Vector3 away = transform.position - hits[i].transform.position;
+                Vector3 away = transform.position - NeighborBuffer[i].transform.position;
                 away.y = 0f;
                 float mag = away.magnitude;
                 if (mag > 0.01f)
@@ -171,18 +237,23 @@ namespace ShikiShiro
 
             if (sep.sqrMagnitude > 0.01f)
             {
-                dir = (dir + sep.normalized * 0.45f).normalized;
+                dir = (dir + sep.normalized * 0.18f).normalized;
             }
         }
 
-        private void Die(bool headshot)
+        private void Die(in DamageInfo info)
         {
             IsAlive = false;
             _controller.enabled = false;
             _despawnAt = Time.time + 2.4f;
-            _visual.localRotation = Quaternion.Euler(-80f, 0f, 0f);
-            _visual.localPosition = new Vector3(0f, 0.2f, 0f);
-            _session.RegisterKill(Kind, headshot);
+            _visual.localRotation = Quaternion.Euler(-55f, 0f, 12f);
+            _visual.localPosition = new Vector3(0f, 0.15f, 0.2f);
+            _motion?.Tick(false, false, true, 0f);
+            Vector3 boom = transform.position + Vector3.up * 0.9f;
+            _fx.Explosion(boom, info.Direction);
+            _fx.Blood(info.Point, info.Direction, true);
+            _sfx.PlayDeath();
+            _session.RegisterKill(Kind, info.IsHeadshot);
             _horde.NotifyKilled(this);
             if (Random.value < 0.18f)
             {
@@ -192,56 +263,91 @@ namespace ShikiShiro
 
         private void ApplyKind(ZombieKind kind)
         {
+            string model = GameAssets.ZombieWalker;
             switch (kind)
             {
                 case ZombieKind.Runner:
                     _maxHealth = 55f;
-                    _moveSpeed = 5.6f;
+                    _moveSpeed = 2.4f;
                     _damage = 8f;
                     _attackRange = 1.35f;
-                    _attackCooldown = 0.85f;
-                    _baseColor = new Color(0.42f, 0.28f, 0.18f);
-                    transform.localScale = new Vector3(0.9f, 0.95f, 0.9f);
-                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinRunner);
-                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
+                    _attackCooldown = 0.95f;
+                    transform.localScale = new Vector3(0.92f, 0.95f, 0.92f);
+                    model = GameAssets.ZombieRunner;
                     break;
                 case ZombieKind.Brute:
                     _maxHealth = 320f;
-                    _moveSpeed = 2.35f;
+                    _moveSpeed = 1.05f;
                     _damage = 28f;
                     _attackRange = 1.7f;
-                    _attackCooldown = 1.4f;
-                    _baseColor = new Color(0.18f, 0.22f, 0.16f);
-                    transform.localScale = new Vector3(1.35f, 1.25f, 1.35f);
-                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinBrute);
-                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
+                    _attackCooldown = 1.55f;
+                    transform.localScale = new Vector3(1.25f, 1.2f, 1.25f);
+                    model = GameAssets.ZombieBrute;
                     break;
                 default:
                     _maxHealth = 100f;
-                    _moveSpeed = 2.9f;
+                    _moveSpeed = 1.35f;
                     _damage = 12f;
                     _attackRange = 1.45f;
-                    _attackCooldown = 1.05f;
-                    _baseColor = new Color(0.32f, 0.38f, 0.24f);
+                    _attackCooldown = 1.2f;
                     transform.localScale = Vector3.one;
-                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinWalker);
-                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
+                    model = GameAssets.ZombieWalker;
                     break;
             }
 
             _health = _maxHealth;
-            if (_skin == null)
+            ReplaceVisual(model);
+        }
+
+        private void ReplaceVisual(string modelPath)
+        {
+            EnsureCached(ref _walkerVisual, GameAssets.ZombieWalker);
+            EnsureCached(ref _runnerVisual, GameAssets.ZombieRunner);
+            EnsureCached(ref _bruteVisual, GameAssets.ZombieBrute);
+            if (_walkerVisual != null)
             {
-                var mat = MaterialFactory.Create(_baseColor, 0.05f, 0.12f);
-                foreach (Renderer r in _renderers)
-                {
-                    r.sharedMaterial = mat;
-                }
+                _walkerVisual.SetActive(modelPath == GameAssets.ZombieWalker);
             }
+
+            if (_runnerVisual != null)
+            {
+                _runnerVisual.SetActive(modelPath == GameAssets.ZombieRunner);
+            }
+
+            if (_bruteVisual != null)
+            {
+                _bruteVisual.SetActive(modelPath == GameAssets.ZombieBrute);
+            }
+
+            _renderers = _visual.GetComponentsInChildren<Renderer>();
+            _skin = GameAssets.Load<Texture2D>(GameAssets.ZombieAtlas);
+            GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
+            _motion?.Bind(_visual);
+        }
+
+        private void EnsureCached(ref GameObject slot, string path)
+        {
+            if (slot != null)
+            {
+                return;
+            }
+
+            slot = GameAssets.AttachCharacter(_visual, path, GameAssets.ZombieAtlas);
         }
 
         private void Flash(Color color)
         {
+            if (_renderers == null)
+            {
+                return;
+            }
+
+            CancelInvoke(nameof(RestoreColor));
+            if (_flashBlock == null)
+            {
+                _flashBlock = new MaterialPropertyBlock();
+            }
+
             foreach (Renderer r in _renderers)
             {
                 r.GetPropertyBlock(_flashBlock);

@@ -25,7 +25,7 @@ namespace ShikiShiro
             _controller.minMoveDistance = 0f;
             _controller.slopeLimit = 45f;
 
-            GameObject visual = GameAssets.AttachCharacter(transform, GameAssets.SkinHuman);
+            GameObject visual = GameAssets.AttachCharacter(transform, GameAssets.Player, GameAssets.ZombieAtlas);
             if (visual == null)
             {
                 visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -42,6 +42,19 @@ namespace ShikiShiro
             head.transform.SetParent(transform, false);
             head.transform.localPosition = new Vector3(0f, 1.62f, 0f);
             Head = head.transform;
+        }
+
+        public void HideBody()
+        {
+            foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
+            {
+                if (renderer.transform.IsChildOf(Head))
+                {
+                    continue;
+                }
+
+                renderer.enabled = false;
+            }
         }
 
         public void AddRecoil(float pitch)
@@ -62,7 +75,15 @@ namespace ShikiShiro
                 Yaw += look.x * _config.PlayerLookSensitivity * Time.deltaTime;
                 Pitch -= look.y * _config.PlayerLookSensitivity * Time.deltaTime;
             }
-            else
+
+            Vector2 gyro = _input.GyroLook;
+            if (gyro.sqrMagnitude > 0.0001f)
+            {
+                float g = _config.GyroLookSensitivity;
+                Yaw += gyro.x * g * Time.deltaTime;
+                Pitch += gyro.y * g * Time.deltaTime;
+            }
+            else if (look.sqrMagnitude <= 0.0001f)
             {
                 Vector2 mouse = GameInput.MouseDelta();
                 Yaw += mouse.x * _config.EditorLookSensitivity;

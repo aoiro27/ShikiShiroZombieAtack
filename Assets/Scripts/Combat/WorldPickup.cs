@@ -9,6 +9,8 @@ namespace ShikiShiro
         private float _life = 22f;
         private Transform _player;
         private ProceduralSfx _sfx;
+        private WeaponController _weapons;
+        private PlayerVitality _vitality;
         private GameObject _ammoVisual;
         private GameObject _medkitVisual;
 
@@ -23,6 +25,8 @@ namespace ShikiShiro
             Kind = kind;
             _player = player;
             _sfx = sfx;
+            _weapons = player.GetComponent<WeaponController>();
+            _vitality = player.GetComponent<PlayerVitality>();
             transform.position = position + Vector3.up * 0.45f;
             gameObject.SetActive(true);
             _life = 22f;
@@ -55,15 +59,16 @@ namespace ShikiShiro
 
             if (Vector3.Distance(transform.position, _player.position) < 1.6f)
             {
-                var weapons = _player.GetComponent<WeaponController>();
-                var vitality = _player.GetComponent<PlayerVitality>();
                 if (Kind == PickupKind.Medkit)
                 {
-                    vitality.Heal(40f);
+                    if (_vitality != null)
+                    {
+                        _vitality.Heal(40f);
+                    }
                 }
-                else
+                else if (_weapons != null)
                 {
-                    weapons.AddAmmo(weapons.Current.MagazineSize * 2);
+                    _weapons.AddAmmo(_weapons.Current.MagazineSize * 2);
                 }
 
                 _sfx?.PlayPickup();
@@ -78,7 +83,7 @@ namespace ShikiShiro
             {
                 visual.transform.localPosition = Vector3.zero;
                 visual.transform.localScale = Vector3.one * 0.7f;
-                GameAssets.BindColormap(visual, GameAssets.WeaponAtlas);
+                GameAssets.BindColormap(visual, GameAssets.CityAtlas);
                 foreach (Collider collider in visual.GetComponentsInChildren<Collider>())
                 {
                     Destroy(collider);

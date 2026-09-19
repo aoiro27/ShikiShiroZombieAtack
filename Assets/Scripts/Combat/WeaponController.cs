@@ -24,6 +24,10 @@ namespace ShikiShiro
         private CombatFx _fx;
         private ProceduralSfx _sfx;
         private Transform _muzzle;
+        private Transform _viewRoot;
+        private Vector3[] _hipPos;
+        private Vector3[] _hipEuler;
+        private float _kick;
         private int _zombieMask;
         private GameObject[] _gunVisuals;
 
@@ -69,26 +73,12 @@ namespace ShikiShiro
                 Equip((_index + 1) % _arsenal.Length);
             }
 
-            if (Reloading)
-            {
-                if (Time.time >= _reloadEnd)
-                {
-                    FinishReload();
-                }
-
-                return;
-            }
-
-            if (_input.ReloadPressed)
-            {
-                BeginReload();
-                return;
-            }
-
             if (_input.FireHeld)
             {
                 TryFire();
             }
+
+            AnimateViewmodel();
         }
 
         private void Equip(int index)
@@ -125,19 +115,14 @@ namespace ShikiShiro
                 return;
             }
 
-            if (Mag <= 0)
-            {
-                BeginReload();
-                return;
-            }
-
-            Mag--;
-            _mags[_index] = Mag;
             _nextFire = Time.time + Current.FireInterval;
             _motor.AddRecoil(Current.Recoil);
             _camera.Shake(0.035f * Current.Pellets, 0.08f);
+            _kick = Mathf.Max(_kick, 0.12f + Current.Recoil * 0.04f);
             _sfx.PlayShot(Current.Id);
-            _fx.MuzzleFlash(_muzzle.position, _muzzle.forward);
+            Vector3 muzzlePos = _muzzle.position;
+            Vector3 muzzleFwd = _camera.UnityCamera.transform.forward;
+            _fx.MuzzleFlash(muzzlePos, muzzleFwd);
             MagazineChanged?.Invoke();
 
             Camera cam = _camera.UnityCamera;
@@ -152,20 +137,23 @@ namespace ShikiShiro
 
                 if (!Physics.Raycast(origin, dir, out RaycastHit hit, Current.Range, _zombieMask, QueryTriggerInteraction.Ignore))
                 {
-                    _fx.Tracer(origin + cam.transform.forward, origin + dir * 18f);
+                    _fx.Tracer(muzzlePos, origin + dir * Mathf.Min(Current.Range, 40f));
                     continue;
                 }
 
-                _fx.Impact(hit.point, hit.normal);
+                _fx.Tracer(muzzlePos, hit.point);
                 var damageable = hit.collider.GetComponentInParent<IDamageable>();
                 if (damageable == null || !damageable.IsAlive)
                 {
+                    _fx.Impact(hit.point, hit.normal);
+                    _sfx.PlayImpact();
                     continue;
                 }
 
                 bool headshot = hit.point.y - hit.collider.bounds.min.y > hit.collider.bounds.size.y * 0.72f;
                 float amount = Current.Damage * (headshot ? 2.4f : 1f);
                 damageable.ApplyDamage(new DamageInfo(amount, hit.point, dir, headshot, Current.Id));
+                _camera.Shake(headshot ? 0.16f : 0.06f, headshot ? 0.16f : 0.08f);
             }
         }
 
@@ -196,48 +184,141 @@ namespace ShikiShiro
 
         private void BuildGunVisual()
         {
-            var holder = new GameObject("Weapons");
-            holder.transform.SetParent(_motor.Head, false);
-            holder.transform.localPosition = new Vector3(0.28f, -0.22f, 0.48f);
-            holder.transform.localRotation = Quaternion.Euler(6f, 90f, 0f);
+            _viewRoot = new GameObject("Viewmodel").transform;
+            _viewRoot.SetParent(_camera.transform, false);
+
+            int viewLayer = LayerMask.NameToLayer("ViewModel");
+            var vmCamGo = new GameObject("ViewmodelCamera");
+            vmCamGo.transform.SetParent(_camera.transform, false);
+            vmCamGo.transform.localPosition = Vector3.zero;
+            vmCamGo.transform.localRotation = Quaternion.identity;
+            var vmCam = vmCamGo.AddComponent<Camera>();
+            vmCam.clearFlags = CameraClearFlags.Depth;
+            vmCam.depth = _camera.UnityCamera.depth + 1f;
+            vmCam.fieldOfView = 50f;
+            vmCam.nearClipPlane = 0.02f;
+            vmCam.farClipPlane = 4f;
+            vmCam.allowHDR = false;
+            vmCam.cullingMask = viewLayer >= 0 ? 1 << viewLayer : _camera.UnityCamera.cullingMask;
+
+            _hipPos = new[]
+            {
+                new Vector3(0.18f, -0.22f, 0.42f),
+                new Vector3(0.22f, -0.28f, 0.48f),
+                new Vector3(0.24f, -0.32f, 0.52f)
+            };
+            _hipEuler = new[]
+            {
+                new Vector3(4f, 6f, -2f),
+                new Vector3(3f, 4f, -3f),
+                new Vector3(6f, 5f, -4f)
+            };
+            float[] scales = { 0.26f, 0.3f, 0.33f };
 
             string[] paths = { GameAssets.Pistol, GameAssets.Smg, GameAssets.Shotgun };
             _gunVisuals = new GameObject[paths.Length];
             for (int i = 0; i < paths.Length; i++)
             {
-                GameObject gun = GameAssets.TryInstantiate(paths[i], holder.transform);
-                if (gun != null)
+                GameObject gun = GameAssets.TryInstantiate(paths[i], _viewRoot);
+                if (gun == null)
                 {
-                    gun.transform.localPosition = Vector3.zero;
-                    gun.transform.localRotation = Quaternion.identity;
-                    gun.transform.localScale = Vector3.one * 0.55f;
-                    GameAssets.BindColormap(gun, GameAssets.WeaponAtlas);
-                    foreach (Collider collider in gun.GetComponentsInChildren<Collider>())
-                    {
-                        Destroy(collider);
-                    }
-
-                    _gunVisuals[i] = gun;
-                    gun.SetActive(false);
+                    continue;
                 }
+
+                foreach (Collider collider in gun.GetComponentsInChildren<Collider>())
+                {
+                    Destroy(collider);
+                }
+
+                foreach (Renderer renderer in gun.GetComponentsInChildren<Renderer>())
+                {
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+
+                AlignViewmodel(gun, scales[i]);
+                if (viewLayer >= 0)
+                {
+                    GameAssets.SetLayerRecursively(gun, viewLayer);
+                }
+
+                _gunVisuals[i] = gun;
+                gun.SetActive(false);
             }
 
             if (_gunVisuals[0] == null)
             {
                 var gun = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 gun.name = "Rifle";
-                gun.transform.SetParent(holder.transform, false);
-                gun.transform.localPosition = Vector3.zero;
-                gun.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
-                gun.transform.localScale = new Vector3(0.12f, 0.12f, 0.7f);
+                gun.transform.SetParent(_viewRoot, false);
+                gun.transform.localPosition = new Vector3(0.2f, -0.2f, 0.45f);
+                gun.transform.localRotation = Quaternion.identity;
+                gun.transform.localScale = new Vector3(0.05f, 0.05f, 0.45f);
                 gun.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.08f, 0.08f, 0.09f), 0.6f, 0.4f);
                 Destroy(gun.GetComponent<Collider>());
                 _gunVisuals[0] = gun;
             }
 
             _muzzle = new GameObject("Muzzle").transform;
-            _muzzle.SetParent(holder.transform, false);
-            _muzzle.localPosition = new Vector3(0.55f, 0.05f, 0f);
+            _muzzle.SetParent(_viewRoot, false);
+            _muzzle.localPosition = new Vector3(0.05f, -0.02f, 0.72f);
+        }
+
+        private static void AlignViewmodel(GameObject gun, float scale)
+        {
+            Transform t = gun.transform;
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+            t.localScale = Vector3.one * scale;
+            Bounds? bounds = GameAssets.WorldBounds(gun);
+            if (!bounds.HasValue)
+            {
+                return;
+            }
+
+            Vector3 size = bounds.Value.size;
+            if (size.x >= size.z && size.x >= size.y)
+            {
+                t.localRotation = Quaternion.Euler(0f, -90f, 0f);
+            }
+            else if (size.y >= size.z && size.y >= size.x)
+            {
+                t.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            }
+
+            bounds = GameAssets.WorldBounds(gun);
+            if (!bounds.HasValue || t.parent == null)
+            {
+                return;
+            }
+
+            Vector3 localCenter = t.parent.InverseTransformPoint(bounds.Value.center);
+            t.localPosition -= localCenter;
+        }
+
+        private void AnimateViewmodel()
+        {
+            if (_viewRoot == null || _hipPos == null)
+            {
+                return;
+            }
+
+            _kick = Mathf.MoveTowards(_kick, 0f, Time.deltaTime * 2.4f);
+            Vector3 hip = _hipPos[_index];
+            Vector3 euler = _hipEuler[_index];
+            float bob = Time.time * (_input.SprintHeld ? 10f : 7f);
+            float move = _input.Move.magnitude;
+            hip += new Vector3(Mathf.Sin(bob) * 0.012f, Mathf.Abs(Mathf.Cos(bob)) * -0.01f, 0f) * move;
+            hip += new Vector3(0f, _kick * 0.08f, -_kick * 0.12f);
+            euler += new Vector3(-_kick * 18f, 0f, _kick * 6f);
+            if (Reloading)
+            {
+                hip += new Vector3(0.04f, -0.12f, -0.06f);
+                euler += new Vector3(18f, -8f, 12f);
+            }
+
+            _viewRoot.localPosition = hip;
+            _viewRoot.localRotation = Quaternion.Euler(euler);
         }
     }
 }

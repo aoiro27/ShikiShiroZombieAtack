@@ -19,6 +19,7 @@ namespace ShikiShiro
         private GameSession _session;
         private GameInput _input;
         private CanvasGroup _pauseGroup;
+        private MinimapHud _minimap;
         private bool _paused;
 
         public VirtualJoystick MoveStick { get; private set; }
@@ -40,6 +41,14 @@ namespace ShikiShiro
             RefreshAmmo();
             RefreshScore();
             RefreshWave();
+        }
+
+        public void BindMinimap(Transform player, ArenaBuilder arena, HordeDirector horde)
+        {
+            if (_minimap != null)
+            {
+                _minimap.Bind(player, arena, horde);
+            }
         }
 
         public void Announce(string text)
@@ -82,8 +91,7 @@ namespace ShikiShiro
 
         private void RefreshAmmo()
         {
-            string reload = _weapons.Reloading ? "  RELOAD" : string.Empty;
-            _ammo.text = $"{_weapons.Current.DisplayName}\n{_weapons.Mag} / {_weapons.Reserve}{reload}";
+            _ammo.text = _weapons.Current.DisplayName;
         }
 
         private void RefreshScore()
@@ -121,10 +129,13 @@ namespace ShikiShiro
             Time.timeScale = _paused ? 0f : 1f;
             _pauseGroup.alpha = _paused ? 1f : 0f;
             _pauseGroup.blocksRaycasts = _paused;
+            Cursor.lockState = _paused ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = _paused;
         }
 
         private void BuildCanvas()
         {
+            UiSprites.Ensure();
             var canvasGo = new GameObject("HUD");
             canvasGo.layer = LayerMask.NameToLayer("UI");
             var canvas = canvasGo.AddComponent<Canvas>();
@@ -136,7 +147,7 @@ namespace ShikiShiro
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            var es = Object.FindObjectOfType<EventSystem>();
+            var es = FindAnyObjectByType<EventSystem>();
             if (es == null)
             {
                 var esGo = new GameObject("EventSystem");
@@ -154,22 +165,10 @@ namespace ShikiShiro
             safeRt.offsetMin = Vector2.zero;
             safeRt.offsetMax = Vector2.zero;
 
-            _health = CreateText(safeGo.transform, "Health", new Vector2(40, -40), new Vector2(520, 80), 36, TextAnchor.UpperLeft);
-            _wave = CreateText(safeGo.transform, "Wave", new Vector2(0, -36), new Vector2(400, 70), 40, TextAnchor.UpperCenter);
-            var waveRt = _wave.rectTransform;
-            waveRt.anchorMin = new Vector2(0.5f, 1f);
-            waveRt.anchorMax = new Vector2(0.5f, 1f);
-            waveRt.pivot = new Vector2(0.5f, 1f);
-            _score = CreateText(safeGo.transform, "Score", new Vector2(-40, -40), new Vector2(480, 90), 30, TextAnchor.UpperRight);
-            var scoreRt = _score.rectTransform;
-            scoreRt.anchorMin = new Vector2(1f, 1f);
-            scoreRt.anchorMax = new Vector2(1f, 1f);
-            scoreRt.pivot = new Vector2(1f, 1f);
-            _ammo = CreateText(safeGo.transform, "Ammo", new Vector2(-48, 210), new Vector2(460, 110), 32, TextAnchor.LowerRight);
-            var ammoRt = _ammo.rectTransform;
-            ammoRt.anchorMin = new Vector2(1f, 0f);
-            ammoRt.anchorMax = new Vector2(1f, 0f);
-            ammoRt.pivot = new Vector2(1f, 0f);
+            _health = CreateHudPlate(safeGo.transform, "Health", new Vector2(24, -24), new Vector2(460, 86), new Vector2(0f, 1f), TextAnchor.MiddleLeft);
+            _wave = CreateHudPlate(safeGo.transform, "Wave", new Vector2(0, -24), new Vector2(280, 78), new Vector2(0.5f, 1f), TextAnchor.MiddleCenter);
+            _score = CreateHudPlate(safeGo.transform, "Score", new Vector2(-320, -24), new Vector2(360, 96), new Vector2(1f, 1f), TextAnchor.MiddleRight);
+            _ammo = CreateHudPlate(safeGo.transform, "Ammo", new Vector2(-48, 470), new Vector2(360, 100), new Vector2(1f, 0f), TextAnchor.MiddleRight);
 
             _announce = CreateText(safeGo.transform, "Announce", Vector2.zero, new Vector2(900, 120), 54, TextAnchor.MiddleCenter);
             var anRt = _announce.rectTransform;
@@ -195,24 +194,24 @@ namespace ShikiShiro
             hurtRt.offsetMax = Vector2.zero;
             _hurt.raycastTarget = false;
 
-            var cross = CreatePanel(safeGo.transform, "Crosshair", new Color(1f, 1f, 1f, 0.75f));
+            var cross = CreateSprite(safeGo.transform, "Crosshair", UiSprites.Crosshair, Color.white);
             var cRt = cross.GetComponent<RectTransform>();
-            cRt.anchorMin = cRt.anchorMax = new Vector2(0.5f, 0.52f);
-            cRt.sizeDelta = new Vector2(8, 8);
+            cRt.anchorMin = cRt.anchorMax = cRt.pivot = new Vector2(0.5f, 0.52f);
+            cRt.sizeDelta = new Vector2(56, 56);
+            cross.GetComponent<Image>().raycastTarget = false;
 
             MoveStick = CreateJoystick(safeGo.transform, new Vector2(220, 210), "MoveStick");
             LookStick = CreateJoystick(safeGo.transform, new Vector2(-420, 210), "LookStick");
             var lookRt = LookStick.GetComponent<RectTransform>();
             lookRt.anchorMin = lookRt.anchorMax = lookRt.pivot = new Vector2(1f, 0f);
 
-            CreateHoldButton(safeGo.transform, new Vector2(-150, 120), "FIRE", _input.SetTouchFire);
-            CreateTapButton(safeGo.transform, new Vector2(-150, 280), "RELOAD", _input.PulseReload);
-            var sprint = CreateHoldButton(safeGo.transform, new Vector2(420, 380), "SPRINT", _input.SetTouchSprint);
+            CreateFireButton(safeGo.transform, new Vector2(-140, 176), new Vector2(228, 228), _input.SetTouchFire);
+            var sprint = CreateHoldButton(safeGo.transform, new Vector2(420, 400), "SPRINT", UiSprites.Sprint, new Vector2(128, 128), _input.SetTouchSprint);
             var sprintRt = sprint.GetComponent<RectTransform>();
             sprintRt.anchorMin = sprintRt.anchorMax = sprintRt.pivot = new Vector2(0f, 0f);
-            CreateTapButton(safeGo.transform, new Vector2(-320, 380), "WEAPON", _input.PulseSwap);
+            CreateIconButton(safeGo.transform, new Vector2(-140, 430), "WEAPON", UiSprites.Weapon, new Vector2(118, 118), _input.PulseSwap);
 
-            var pause = CreateTapButton(safeGo.transform, new Vector2(-80, -40), "II", () =>
+            var pause = CreateIconButton(safeGo.transform, new Vector2(-72, -28), "PAUSE", UiSprites.Pause, new Vector2(88, 88), () =>
             {
                 if (_session.State == SessionState.Playing)
                 {
@@ -225,6 +224,8 @@ namespace ShikiShiro
             });
             var pauseRt = pause.GetComponent<RectTransform>();
             pauseRt.anchorMin = pauseRt.anchorMax = pauseRt.pivot = new Vector2(1f, 1f);
+
+            _minimap = MinimapHud.Create(safeGo.transform);
 
             var pausePanel = CreatePanel(safeGo.transform, "Pause", new Color(0f, 0f, 0f, 0.55f));
             var pauseRtPanel = pausePanel.GetComponent<RectTransform>();
@@ -245,55 +246,107 @@ namespace ShikiShiro
 
         private VirtualJoystick CreateJoystick(Transform parent, Vector2 anchored, string name)
         {
-            var root = CreatePanel(parent, name, new Color(1f, 1f, 1f, 0.12f));
+            var root = CreateSprite(parent, name, UiSprites.Ring, Color.white);
             var rt = root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
             rt.anchoredPosition = anchored;
-            rt.sizeDelta = new Vector2(240, 240);
-            var handle = CreatePanel(root.transform, "Handle", new Color(1f, 1f, 1f, 0.35f));
+            rt.sizeDelta = new Vector2(248, 248);
+            var handle = CreateSprite(root.transform, "Handle", UiSprites.Knob, Color.white);
             var hRt = handle.GetComponent<RectTransform>();
             hRt.anchorMin = hRt.anchorMax = hRt.pivot = new Vector2(0.5f, 0.5f);
             hRt.anchoredPosition = Vector2.zero;
-            hRt.sizeDelta = new Vector2(90, 90);
+            hRt.sizeDelta = new Vector2(96, 96);
+            handle.GetComponent<Image>().raycastTarget = false;
             var joy = root.AddComponent<VirtualJoystick>();
-            joy.Configure(hRt, 90f);
+            joy.Configure(hRt, 92f);
             return joy;
         }
 
-        private GameObject CreateHoldButton(Transform parent, Vector2 pos, string label, System.Action<bool> onHold)
+        private GameObject CreateFireButton(Transform parent, Vector2 pos, Vector2 size, System.Action<bool> onHold)
         {
-            var go = CreatePanel(parent, label, new Color(0.85f, 0.2f, 0.15f, 0.55f));
+            var go = CreateHoldButton(parent, pos, "FIRE", UiSprites.Fire, size, onHold);
+            var image = go.GetComponent<Image>();
+            image.preserveAspect = true;
+            image.raycastTarget = true;
+            return go;
+        }
+
+        private GameObject CreateHoldButton(Transform parent, Vector2 pos, string name, Sprite sprite, Vector2 size, System.Action<bool> onHold)
+        {
+            var go = CreateSprite(parent, name, sprite, Color.white);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(150, 150);
-            CreateText(go.transform, "L", Vector2.zero, new Vector2(150, 150), 28, TextAnchor.MiddleCenter).text = label;
+            rt.sizeDelta = size;
+            var image = go.GetComponent<Image>();
             var trigger = go.AddComponent<EventTrigger>();
             var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            down.callback.AddListener(_ => onHold(true));
+            down.callback.AddListener(_ =>
+            {
+                image.color = new Color(0.78f, 0.78f, 0.78f, 1f);
+                onHold(true);
+            });
             var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            up.callback.AddListener(_ => onHold(false));
+            up.callback.AddListener(_ =>
+            {
+                image.color = Color.white;
+                onHold(false);
+            });
             var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exit.callback.AddListener(_ => onHold(false));
+            exit.callback.AddListener(_ =>
+            {
+                image.color = Color.white;
+                onHold(false);
+            });
             trigger.triggers.Add(down);
             trigger.triggers.Add(up);
             trigger.triggers.Add(exit);
             return go;
         }
 
-        private GameObject CreateTapButton(Transform parent, Vector2 pos, string label, UnityEngine.Events.UnityAction onClick)
+        private GameObject CreateIconButton(Transform parent, Vector2 pos, string name, Sprite sprite, Vector2 size, UnityEngine.Events.UnityAction onClick)
         {
-            var go = CreatePanel(parent, label, new Color(0.15f, 0.15f, 0.18f, 0.55f));
+            var go = CreateSprite(parent, name, sprite, Color.white);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(140, 70);
-            CreateText(go.transform, "L", Vector2.zero, new Vector2(140, 70), 24, TextAnchor.MiddleCenter).text = label;
+            rt.sizeDelta = size;
             if (onClick != null)
             {
                 go.AddComponent<Button>().onClick.AddListener(onClick);
             }
 
+            return go;
+        }
+
+        private Text CreateHudPlate(Transform parent, string name, Vector2 pos, Vector2 size, Vector2 anchor, TextAnchor align)
+        {
+            var plate = CreateSprite(parent, name + "Plate", UiSprites.Panel, Color.white);
+            var rt = plate.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            plate.GetComponent<Image>().type = Image.Type.Sliced;
+            plate.GetComponent<Image>().preserveAspect = false;
+            plate.GetComponent<Image>().raycastTarget = false;
+            var text = CreateText(plate.transform, name, Vector2.zero, size - new Vector2(28f, 12f), 30, align);
+            var tRt = text.rectTransform;
+            tRt.anchorMin = Vector2.zero;
+            tRt.anchorMax = Vector2.one;
+            tRt.offsetMin = new Vector2(18f, 8f);
+            tRt.offsetMax = new Vector2(-18f, -8f);
+            tRt.anchoredPosition = Vector2.zero;
+            return text;
+        }
+
+        private static GameObject CreateSprite(Transform parent, string name, Sprite sprite, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.preserveAspect = true;
             return go;
         }
 

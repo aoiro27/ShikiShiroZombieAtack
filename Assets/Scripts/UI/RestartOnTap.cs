@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 namespace ShikiShiro
@@ -20,15 +19,14 @@ namespace ShikiShiro
                 return;
             }
 
-            if (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began))
+            bool pressed = Input.GetMouseButtonDown(0);
+            if (!pressed && Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
             {
-                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                {
-                    Time.timeScale = 1f;
-                    SceneManager.LoadScene(0);
-                    return;
-                }
+                pressed = true;
+            }
 
+            if (pressed)
+            {
                 Time.timeScale = 1f;
                 SceneManager.LoadScene(0);
             }

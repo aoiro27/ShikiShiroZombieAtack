@@ -26,7 +26,6 @@ namespace ShikiShiro
         public T Get()
         {
             T item = _inactive.Count > 0 ? _inactive.Pop() : Create();
-            item.gameObject.SetActive(true);
             return item;
         }
 

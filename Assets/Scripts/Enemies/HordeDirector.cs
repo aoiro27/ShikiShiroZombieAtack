@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ShikiShiro
@@ -17,6 +18,10 @@ namespace ShikiShiro
         private int _alive;
         private HudController _hud;
 
+        private float _lastPackAngle = 999f;
+
+        public IReadOnlyList<ZombieAgent> AllZombies => _zombies != null ? _zombies.All : System.Array.Empty<ZombieAgent>();
+
         public void Initialize(GameConfig config, GameSession session, ArenaBuilder arena, Transform player, CombatFx fx, ProceduralSfx sfx, HudController hud)
         {
             _config = config;
@@ -29,7 +34,7 @@ namespace ShikiShiro
 
             var zombieRoot = new GameObject("ZombiePool").transform;
             zombieRoot.SetParent(transform, false);
-            _zombies = new ObjectPool<ZombieAgent>(CreateZombie, zombieRoot, config.ZombiePoolSize);
+            _zombies = new ObjectPool<ZombieAgent>(CreateZombie, zombieRoot, 0);
 
             var pickupRoot = new GameObject("PickupPool").transform;
             pickupRoot.SetParent(transform, false);
@@ -54,31 +59,43 @@ namespace ShikiShiro
         public void DropPickup(Vector3 position)
         {
             WorldPickup pickup = _pickups.Get();
-            pickup.Setup(Random.value < 0.4f ? PickupKind.Medkit : PickupKind.Ammo, position, _player, _sfx);
+            pickup.Setup(PickupKind.Medkit, position, _player, _sfx);
         }
 
         private IEnumerator RunWaves()
         {
+            yield return null;
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(3f);
+
             while (_session.State != SessionState.GameOver)
             {
                 int wave = _session.Wave;
-                _remainingToSpawn = 6 + wave * 4 + (wave >= 5 ? wave : 0);
+                _remainingToSpawn = 6 + wave * 3;
                 _alive = 0;
                 _hud.Announce($"WAVE {wave}");
                 _sfx.PlayRoar();
+                _lastPackAngle = 999f;
 
                 while (_remainingToSpawn > 0 && _session.State == SessionState.Playing)
                 {
-                    if (_alive >= _config.MaxAliveZombies)
+                    while (_alive >= _config.MaxAliveZombies && _session.State == SessionState.Playing)
                     {
                         yield return null;
-                        continue;
                     }
 
-                    SpawnOne(SelectKind(wave));
-                    _remainingToSpawn--;
-                    float interval = Mathf.Lerp(1.1f, 0.28f, Mathf.Clamp01(wave / 12f));
-                    yield return new WaitForSeconds(interval);
+                    if (_session.State != SessionState.Playing)
+                    {
+                        break;
+                    }
+
+                    int pack = Mathf.Clamp(4 + wave / 2, 4, 8);
+                    pack = Mathf.Min(pack, _remainingToSpawn);
+                    yield return SpawnPack(pack, wave);
+                    if (_remainingToSpawn > 0 && _session.State == SessionState.Playing)
+                    {
+                        yield return new WaitForSeconds(Mathf.Lerp(7.5f, 5f, Mathf.Clamp01(wave / 10f)));
+                    }
                 }
 
                 while (_alive > 0 && _session.State == SessionState.Playing)
@@ -103,12 +120,89 @@ namespace ShikiShiro
             }
         }
 
-        private void SpawnOne(ZombieKind kind)
+        private IEnumerator SpawnPack(int count, int wave)
         {
-            Vector3 pos = _arena.RandomSpawnOnRing(18f, _arena.Radius - 4f);
-            ZombieAgent zombie = _zombies.Get();
-            zombie.Spawn(kind, pos, _player, _session, _fx, _sfx, this);
-            _alive++;
+            Vector3 anchor = PickPackAnchor();
+            for (int i = 0; i < count; i++)
+            {
+                if (_session.State != SessionState.Playing)
+                {
+                    yield break;
+                }
+
+                Vector3 pos = PlaceAround(anchor, 1.1f, 3.4f);
+                ZombieAgent zombie = _zombies.Get();
+                zombie.Spawn(SelectKind(wave), pos, _player, _session, _fx, _sfx, this);
+                _alive++;
+                _remainingToSpawn--;
+                yield return new WaitForSeconds(0.12f);
+            }
+        }
+
+        private Vector3 PickPackAnchor()
+        {
+            Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
+            float angle;
+            int guard = 0;
+            do
+            {
+                angle = Random.Range(0f, 360f);
+                guard++;
+            }
+            while (guard < 12 && Mathf.Abs(Mathf.DeltaAngle(_lastPackAngle, angle)) < 70f);
+
+            _lastPackAngle = angle;
+            Vector3 raw = origin + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(22f, 34f);
+            return PlaceAround(raw, 0f, 1.2f);
+        }
+
+        private Vector3 PlaceAround(Vector3 center, float minJitter, float maxJitter)
+        {
+            int mask = LayerMask.GetMask("Obstacle", "Ground");
+            Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
+            for (int i = 0; i < 20; i++)
+            {
+                Vector2 jitter = Random.insideUnitCircle * Random.Range(minJitter, maxJitter);
+                Vector3 p = center + new Vector3(jitter.x, 0f, jitter.y);
+                Vector3 probe = p + Vector3.up * 8f;
+                if (Physics.Raycast(probe, Vector3.down, out RaycastHit hit, 24f, mask == 0 ? ~0 : mask, QueryTriggerInteraction.Ignore))
+                {
+                    p = hit.point + Vector3.up * 0.08f;
+                }
+                else
+                {
+                    p.y = origin.y;
+                }
+
+                if (Mathf.Abs(p.y - origin.y) > 2.5f)
+                {
+                    continue;
+                }
+
+                Vector2 fromPlayer = new Vector2(p.x - origin.x, p.z - origin.z);
+                if (fromPlayer.sqrMagnitude < 18f * 18f)
+                {
+                    continue;
+                }
+
+                float limit = _arena.Radius * 0.86f;
+                Vector2 xz = new Vector2(p.x - _arena.SpawnPoint.x, p.z - _arena.SpawnPoint.z);
+                if (xz.magnitude > limit)
+                {
+                    continue;
+                }
+
+                if (Physics.CheckCapsule(p + Vector3.up * 0.6f, p + Vector3.up * 1.6f, 0.4f, LayerMask.GetMask("Obstacle"), QueryTriggerInteraction.Ignore))
+                {
+                    continue;
+                }
+
+                return p;
+            }
+
+            Vector3 fallback = origin + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 24f;
+            fallback.y = origin.y;
+            return fallback;
         }
 
         private static ZombieKind SelectKind(int wave)
