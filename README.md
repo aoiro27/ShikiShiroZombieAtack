@@ -2,7 +2,7 @@
 
 iPad 横画面向けのファーストパーソン・ゾンビシューティングです。Unity で開いて Play すると、夜の封鎖街区が生成され、ウェーブ生存戦が始まります。
 
-見た目は CC0 の KayKit / Quaternius / Kenney モデル、システムはヒットスキャン射撃・ホードAI・武器3種・ドロップ・ハイスコアまで一通り入っています。
+見た目は KayKit / ストアのゾンビとライフル、システムはヒットスキャン射撃・ホードAI・武器3種・ドロップ・ハイスコアまで一通り入っています。
 
 ## 必要環境
 
@@ -20,7 +20,6 @@ Unity Hub → Add project from disk でこのフォルダを指定。初回イ�
 | 左スティック | 移動 |
 | 右スティック | 視点 |
 | 右下の赤い「撃つ」ボタン | 射撃（画像ボタン、長押し連射） |
-| RELOAD | リロード |
 | WEAPON | ハンドガン / SMG / ショットガン |
 | SPRINT | ダッシュ |
 | II | ポーズ。ゲームオーバー後は再開 |
@@ -46,4 +45,4 @@ Build Settings → iOS。Player Settings は初期値で iPad Only・横画面�
 
 ## クレジット
 
-`Assets/Art/THIRD_PARTY.txt` を参照（いずれも CC0）。
+`Assets/Art/THIRD_PARTY.txt` を参照。

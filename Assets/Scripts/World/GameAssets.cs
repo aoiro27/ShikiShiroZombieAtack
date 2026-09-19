@@ -17,25 +17,10 @@ namespace ShikiShiro
         public const string Pistol = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string Smg = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string Shotgun = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
-        public const string AmmoCrate = "Assets/CartoonLowPolyCityLite/Prefabs/Trash_01.prefab";
-        public const string MedkitCrate = "Assets/CartoonLowPolyCityLite/Prefabs/Trash_01.prefab";
+        public const string AmmoCrate = "KayKit/box_A";
+        public const string MedkitCrate = "KayKit/box_A";
         public const string WeaponAtlas = "Kenney/Weapons/Textures/colormap";
         public const string CityAtlas = "KayKit/citybits_texture";
-        public const string CityPrefab = "Assets/Versatile Studio Assets/Demo City By Versatile Studio/Prefabs/demo_city_by_versatile_studio.prefab";
-
-        public static readonly string[] BlockBuildings =
-        {
-            "Assets/CartoonLowPolyCityLite/Prefabs/House_01.prefab",
-            "Assets/CartoonLowPolyCityLite/Prefabs/House_16.prefab",
-            "KayKit/building_A",
-            "KayKit/building_B",
-            "KayKit/building_C",
-            "KayKit/building_D",
-            "KayKit/building_E",
-            "KayKit/building_F",
-            "KayKit/building_G",
-            "KayKit/building_H"
-        };
 
         public static T Load<T>(string path) where T : Object
         {
@@ -101,53 +86,6 @@ namespace ShikiShiro
             return go;
         }
 
-        public static GameObject SpawnCity(Transform parent)
-        {
-            GameObject go = TryInstantiate(CityPrefab, parent);
-            if (go == null)
-            {
-                return null;
-            }
-
-            EnsureMeshColliders(go);
-            return go;
-        }
-
-        public static Vector3 FindStreetSpawn(GameObject city)
-        {
-            Transform piece = FindNamed(city.transform, "city_part_demo_main1");
-            if (piece == null)
-            {
-                piece = FindNamed(city.transform, "city_part_main");
-            }
-
-            Vector3 hint = piece != null ? piece.position : city.transform.position;
-            Renderer renderer = piece != null ? piece.GetComponent<Renderer>() : null;
-            if (renderer == null && piece != null)
-            {
-                renderer = piece.GetComponentInChildren<Renderer>();
-            }
-
-            Vector3 origin = hint + Vector3.up * 60f;
-            int mask = ~0;
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 180f, mask, QueryTriggerInteraction.Ignore))
-            {
-                Vector3 p = hit.point;
-                p.y += 0.12f;
-                return p;
-            }
-
-            if (renderer != null)
-            {
-                Vector3 p = renderer.bounds.center;
-                p.y = renderer.bounds.min.y + 0.2f;
-                return p;
-            }
-
-            hint.y = 0.2f;
-            return hint;
-        }
-
         public static GameObject AttachCharacter(Transform parent, string modelPath, string texturePath)
         {
             GameObject visual = TryInstantiate(modelPath, parent);
@@ -207,61 +145,7 @@ namespace ShikiShiro
 
         public static Bounds? WorldBounds(GameObject go)
         {
-            Transform focus = FindNamed(go.transform, "city_part_demo_main1");
-            if (focus != null)
-            {
-                Bounds? focused = CombinedBounds(focus.gameObject);
-                if (focused.HasValue)
-                {
-                    return focused;
-                }
-            }
-
             return CombinedBounds(go);
-        }
-
-        private static void EnsureMeshColliders(GameObject go)
-        {
-            int ground = LayerMask.NameToLayer("Ground");
-            int obstacle = LayerMask.NameToLayer("Obstacle");
-            foreach (MeshFilter filter in go.GetComponentsInChildren<MeshFilter>(true))
-            {
-                if (filter.sharedMesh == null)
-                {
-                    continue;
-                }
-
-                var col = filter.GetComponent<MeshCollider>();
-                if (col == null)
-                {
-                    col = filter.gameObject.AddComponent<MeshCollider>();
-                }
-
-                col.sharedMesh = filter.sharedMesh;
-                col.convex = false;
-                float height = CombinedBounds(filter.gameObject)?.size.y ?? 0f;
-                int layer = height > 6f && obstacle >= 0 ? obstacle : (ground >= 0 ? ground : 0);
-                filter.gameObject.layer = layer;
-            }
-        }
-
-        private static Transform FindNamed(Transform root, string name)
-        {
-            if (root.name == name)
-            {
-                return root;
-            }
-
-            for (int i = 0; i < root.childCount; i++)
-            {
-                Transform found = FindNamed(root.GetChild(i), name);
-                if (found != null)
-                {
-                    return found;
-                }
-            }
-
-            return null;
         }
 
         public static void ApplyMainTexture(GameObject go, Texture2D texture)
@@ -292,18 +176,10 @@ namespace ShikiShiro
 
         public static void Paint(GameObject go, string path)
         {
-            Texture2D atlas = LoadCityAtlas();
-            Color tint = Color.white;
-            if (path.Contains("House_01"))
-            {
-                tint = new Color(0.82f, 0.62f, 0.42f);
-            }
-            else if (path.Contains("House_16"))
-            {
-                tint = new Color(0.55f, 0.62f, 0.58f);
-            }
-
-            Material mat = MaterialFactory.Create(tint, atlas);
+            Texture2D atlas = GuessAtlas(path) == WeaponAtlas
+                ? Load<Texture2D>(WeaponAtlas)
+                : LoadCityAtlas();
+            Material mat = MaterialFactory.Create(Color.white, atlas);
             foreach (Renderer renderer in go.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.sharedMaterial = mat;

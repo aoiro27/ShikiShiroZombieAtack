@@ -1,21 +1,17 @@
 Visual models (CC0, Unity-ready):
 
-- Quaternius Zombie Apocalypse Kit
+- Quaternius Zombie Apocalypse Kit (survivor Matt + shared atlas)
   https://quaternius.com/packs/zombieapocalypsekit.html
-  Zombies: Basic / Arm / Chubby, survivor Matt, shared atlas
 
 - KayKit City Builder Bits
   https://github.com/KayKit-Game-Assets/KayKit-City-Builder-Bits-1.0
-  Buildings, roads, cars, dumpsters, street lights
+  Buildings, roads, cars, dumpsters, street lights, pickup crate
 
 - Kenney Impact Sounds, Sci-Fi Sounds, RPG Audio (CC0)
   https://kenney.nl/assets/impact-sounds
   https://kenney.nl/assets/sci-fi-sounds
   https://kenney.nl/assets/rpg-audio
   Guns/flesh/impact/explosion: Assets/Resources/Sfx
-    laserLarge_*.ogg, laserRetro_*.ogg, laserSmall_*.ogg (銃声)
-    explosionCrunch_*.ogg, lowFrequency_explosion_*.ogg (爆発・ショットガン)
-    impact*_*.ogg, chop.ogg, knifeSlice.ogg, slime_*.ogg (ヒット)
 
 - OpenGameArt zombie voices (CC0)
   Darsycho "Zombie moans" https://opengameart.org/content/zombie-moans
@@ -32,14 +28,11 @@ Visual models (CC0, Unity-ready):
 - Kenney Game Icons / Shooting Gallery HUD (CC0)
   https://kenney.nl/assets/game-icons
   https://kenney.nl/assets/shooting-gallery
-  Fire button artwork in Assets/Resources/Ui
+  Fire button: Assets/Resources/Ui/fire_button.png
 
-Unity Asset Store (standard EULA), imported into Assets/:
+Unity Asset Store (standard EULA), used at runtime:
 
-- Demo City By Versatile Studio
-- FREE Shirtless Zombie / FREE Zombie Male AAB (Studio New Punch)
+- FREE Shirtless Zombie (Studio New Punch)
+- FREE Zombie Male AAB (Studio New Punch)
 - FPS Gun 4K - Assault Rifle 1 (Heart State Games)
 - Character Pack: Zombie Sample (Supercyan)
-- Low Poly Street Pack (Dynamic Art)
-- Cartoon Low Poly City Pack Lite / Low Poly FPS Weapons Lite (JustCreate)
-- Low Poly Road Pack (Broken Vector)
