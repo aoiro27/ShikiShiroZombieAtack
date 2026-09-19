@@ -9,6 +9,14 @@ namespace ShikiShiro
         private float _life = 22f;
         private Transform _player;
         private ProceduralSfx _sfx;
+        private GameObject _ammoVisual;
+        private GameObject _medkitVisual;
+
+        public void BuildVisual()
+        {
+            _ammoVisual = CreateChild(GameAssets.AmmoCrate, new Color(0.85f, 0.7f, 0.2f));
+            _medkitVisual = CreateChild(GameAssets.MedkitCrate, new Color(0.75f, 0.15f, 0.15f));
+        }
 
         public void Setup(PickupKind kind, Vector3 position, Transform player, ProceduralSfx sfx)
         {
@@ -18,11 +26,15 @@ namespace ShikiShiro
             transform.position = position + Vector3.up * 0.45f;
             gameObject.SetActive(true);
             _life = 22f;
-            var renderer = GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = MaterialFactory.Create(
-                kind == PickupKind.Medkit ? new Color(0.75f, 0.15f, 0.15f) : new Color(0.85f, 0.7f, 0.2f),
-                0.1f,
-                0.4f);
+            if (_ammoVisual != null)
+            {
+                _ammoVisual.SetActive(kind == PickupKind.Ammo);
+            }
+
+            if (_medkitVisual != null)
+            {
+                _medkitVisual.SetActive(kind == PickupKind.Medkit);
+            }
         }
 
         private void Update()
@@ -57,6 +69,32 @@ namespace ShikiShiro
                 _sfx?.PlayPickup();
                 gameObject.SetActive(false);
             }
+        }
+
+        private GameObject CreateChild(string path, Color fallback)
+        {
+            GameObject visual = GameAssets.TryInstantiate(path, transform);
+            if (visual != null)
+            {
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localScale = Vector3.one * 0.7f;
+                GameAssets.BindColormap(visual, GameAssets.WeaponAtlas);
+                foreach (Collider collider in visual.GetComponentsInChildren<Collider>())
+                {
+                    Destroy(collider);
+                }
+
+                visual.SetActive(false);
+                return visual;
+            }
+
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.SetParent(transform, false);
+            cube.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+            cube.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(fallback, 0.1f, 0.4f);
+            Destroy(cube.GetComponent<Collider>());
+            cube.SetActive(false);
+            return cube;
         }
     }
 }

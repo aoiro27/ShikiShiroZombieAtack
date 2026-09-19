@@ -25,7 +25,9 @@ namespace ShikiShiro
         private float _despawnAt;
         private float _bob;
         private Color _baseColor;
-        private MeshRenderer[] _renderers;
+        private Renderer[] _renderers;
+        private readonly MaterialPropertyBlock _flashBlock = new MaterialPropertyBlock();
+        private Texture2D _skin;
 
         public void BuildVisual()
         {
@@ -40,27 +42,25 @@ namespace ShikiShiro
             _visual = new GameObject("Visual").transform;
             _visual.SetParent(transform, false);
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(_visual, false);
-            body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            Destroy(body.GetComponent<Collider>());
+            GameObject character = GameAssets.AttachCharacter(_visual, GameAssets.SkinWalker);
+            if (character == null)
+            {
+                var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                body.name = "Body";
+                body.transform.SetParent(_visual, false);
+                body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+                Destroy(body.GetComponent<Collider>());
 
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.name = "Head";
-            head.transform.SetParent(_visual, false);
-            head.transform.localPosition = new Vector3(0f, 1.72f, 0.05f);
-            head.transform.localScale = Vector3.one * 0.42f;
-            Destroy(head.GetComponent<Collider>());
+                var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                head.name = "Head";
+                head.transform.SetParent(_visual, false);
+                head.transform.localPosition = new Vector3(0f, 1.72f, 0.05f);
+                head.transform.localScale = Vector3.one * 0.42f;
+                Destroy(head.GetComponent<Collider>());
+            }
 
-            var jaw = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            jaw.name = "Jaw";
-            jaw.transform.SetParent(_visual, false);
-            jaw.transform.localPosition = new Vector3(0f, 1.55f, 0.18f);
-            jaw.transform.localScale = new Vector3(0.22f, 0.08f, 0.16f);
-            Destroy(jaw.GetComponent<Collider>());
-
-            _renderers = _visual.GetComponentsInChildren<MeshRenderer>();
+            _renderers = _visual.GetComponentsInChildren<Renderer>();
+            GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
         }
 
         public void Spawn(ZombieKind kind, Vector3 position, Transform target, GameSession session, CombatFx fx, ProceduralSfx sfx, HordeDirector horde)
@@ -202,6 +202,8 @@ namespace ShikiShiro
                     _attackCooldown = 0.85f;
                     _baseColor = new Color(0.42f, 0.28f, 0.18f);
                     transform.localScale = new Vector3(0.9f, 0.95f, 0.9f);
+                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinRunner);
+                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
                     break;
                 case ZombieKind.Brute:
                     _maxHealth = 320f;
@@ -211,6 +213,8 @@ namespace ShikiShiro
                     _attackCooldown = 1.4f;
                     _baseColor = new Color(0.18f, 0.22f, 0.16f);
                     transform.localScale = new Vector3(1.35f, 1.25f, 1.35f);
+                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinBrute);
+                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
                     break;
                 default:
                     _maxHealth = 100f;
@@ -220,22 +224,30 @@ namespace ShikiShiro
                     _attackCooldown = 1.05f;
                     _baseColor = new Color(0.32f, 0.38f, 0.24f);
                     transform.localScale = Vector3.one;
+                    _skin = GameAssets.Load<Texture2D>(GameAssets.SkinWalker);
+                    GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
                     break;
             }
 
             _health = _maxHealth;
-            var mat = MaterialFactory.Create(_baseColor, 0.05f, 0.12f);
-            foreach (MeshRenderer r in _renderers)
+            if (_skin == null)
             {
-                r.sharedMaterial = mat;
+                var mat = MaterialFactory.Create(_baseColor, 0.05f, 0.12f);
+                foreach (Renderer r in _renderers)
+                {
+                    r.sharedMaterial = mat;
+                }
             }
         }
 
         private void Flash(Color color)
         {
-            foreach (MeshRenderer r in _renderers)
+            foreach (Renderer r in _renderers)
             {
-                r.material.color = color;
+                r.GetPropertyBlock(_flashBlock);
+                _flashBlock.SetColor("_Color", color);
+                _flashBlock.SetColor("_BaseColor", color);
+                r.SetPropertyBlock(_flashBlock);
             }
 
             Invoke(nameof(RestoreColor), 0.08f);
@@ -248,12 +260,17 @@ namespace ShikiShiro
                 return;
             }
 
-            foreach (MeshRenderer r in _renderers)
+            foreach (Renderer r in _renderers)
             {
                 if (r != null)
                 {
-                    r.material.color = _baseColor;
+                    r.SetPropertyBlock(null);
                 }
+            }
+
+            if (_skin != null)
+            {
+                GameAssets.ApplyMainTexture(_visual.gameObject, _skin);
             }
         }
     }

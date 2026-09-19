@@ -25,6 +25,7 @@ namespace ShikiShiro
         private ProceduralSfx _sfx;
         private Transform _muzzle;
         private int _zombieMask;
+        private GameObject[] _gunVisuals;
 
         public WeaponController()
         {
@@ -45,8 +46,8 @@ namespace ShikiShiro
             _fx = fx;
             _sfx = sfx;
             _zombieMask = LayerMask.GetMask("Zombie", "Obstacle", "Ground", "Default");
-            Equip(0);
             BuildGunVisual();
+            Equip(0);
         }
 
         public void AddAmmo(int amount)
@@ -98,6 +99,23 @@ namespace ShikiShiro
             Reserve = _reserves[_index];
             Reloading = false;
             MagazineChanged?.Invoke();
+            ShowEquippedGun();
+        }
+
+        private void ShowEquippedGun()
+        {
+            if (_gunVisuals == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _gunVisuals.Length; i++)
+            {
+                if (_gunVisuals[i] != null)
+                {
+                    _gunVisuals[i].SetActive(i == _index);
+                }
+            }
         }
 
         private void TryFire()
@@ -178,27 +196,48 @@ namespace ShikiShiro
 
         private void BuildGunVisual()
         {
-            var gun = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            gun.name = "Rifle";
-            gun.transform.SetParent(_motor.Head, false);
-            gun.transform.localPosition = new Vector3(0.28f, -0.18f, 0.55f);
-            gun.transform.localRotation = Quaternion.Euler(4f, 0f, 0f);
-            gun.transform.localScale = new Vector3(0.12f, 0.12f, 0.7f);
-            gun.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.08f, 0.08f, 0.09f), 0.6f, 0.4f);
-            Destroy(gun.GetComponent<Collider>());
+            var holder = new GameObject("Weapons");
+            holder.transform.SetParent(_motor.Head, false);
+            holder.transform.localPosition = new Vector3(0.28f, -0.22f, 0.48f);
+            holder.transform.localRotation = Quaternion.Euler(6f, 90f, 0f);
 
-            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            barrel.name = "Barrel";
-            barrel.transform.SetParent(gun.transform, false);
-            barrel.transform.localPosition = new Vector3(0f, 0f, 0.55f);
-            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            barrel.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
-            barrel.GetComponent<MeshRenderer>().sharedMaterial = gun.GetComponent<MeshRenderer>().sharedMaterial;
-            Destroy(barrel.GetComponent<Collider>());
+            string[] paths = { GameAssets.Pistol, GameAssets.Smg, GameAssets.Shotgun };
+            _gunVisuals = new GameObject[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                GameObject gun = GameAssets.TryInstantiate(paths[i], holder.transform);
+                if (gun != null)
+                {
+                    gun.transform.localPosition = Vector3.zero;
+                    gun.transform.localRotation = Quaternion.identity;
+                    gun.transform.localScale = Vector3.one * 0.55f;
+                    GameAssets.BindColormap(gun, GameAssets.WeaponAtlas);
+                    foreach (Collider collider in gun.GetComponentsInChildren<Collider>())
+                    {
+                        Destroy(collider);
+                    }
+
+                    _gunVisuals[i] = gun;
+                    gun.SetActive(false);
+                }
+            }
+
+            if (_gunVisuals[0] == null)
+            {
+                var gun = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                gun.name = "Rifle";
+                gun.transform.SetParent(holder.transform, false);
+                gun.transform.localPosition = Vector3.zero;
+                gun.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+                gun.transform.localScale = new Vector3(0.12f, 0.12f, 0.7f);
+                gun.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.08f, 0.08f, 0.09f), 0.6f, 0.4f);
+                Destroy(gun.GetComponent<Collider>());
+                _gunVisuals[0] = gun;
+            }
 
             _muzzle = new GameObject("Muzzle").transform;
-            _muzzle.SetParent(gun.transform, false);
-            _muzzle.localPosition = new Vector3(0f, 0f, 0.72f);
+            _muzzle.SetParent(holder.transform, false);
+            _muzzle.localPosition = new Vector3(0.55f, 0.05f, 0f);
         }
     }
 }

@@ -137,11 +137,10 @@ namespace ShikiShiro
 
         private WorldPickup CreatePickup()
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = "Pickup";
-            go.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
-            Destroy(go.GetComponent<Collider>());
-            return go.AddComponent<WorldPickup>();
+            var go = new GameObject("Pickup");
+            var pickup = go.AddComponent<WorldPickup>();
+            pickup.BuildVisual();
+            return pickup;
         }
     }
 }

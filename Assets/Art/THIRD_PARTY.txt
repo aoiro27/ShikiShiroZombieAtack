@@ -1,0 +1,8 @@
+Visual models and textures are Kenney 3D packs (CC0 1.0), also published on the Unity Asset Store:
+
+- Animated Characters 3  https://kenney.nl/assets/animated-characters-3
+- City Kit (Industrial)  https://kenney.nl/assets/city-kit-industrial
+- City Kit (Roads)       https://kenney.nl/assets/city-kit-roads
+- Blaster Kit            https://kenney.nl/assets/blaster-kit
+
+Credit (optional): Kenney.nl

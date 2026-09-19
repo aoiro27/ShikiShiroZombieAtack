@@ -2,7 +2,7 @@
 
 iPad 横画面向けの、サードパーソン・ゾンビシューティングです。Unity エディタで開くと、夜の封鎖街区が実行時に組み立てられ、ウェーブ式の生存戦が始まります。
 
-このマシン上には Unity が入っていなかったため、**Unity 2022.3 LTS で開いて Play** するとプレイできます。見た目は Primitive ベースですが、操作・武器・AI・ウェーブ・HUD は実戦用に組んであります。
+このマシン上には Unity が入っていなかったため、**Unity 2022.3 LTS で開いて Play** するとプレイできます。見た目は Kenney の 3D アセット（Unity Asset Store でも配信されている CC0 パック）を `Resources` から読み込みます。アセットがまだインポート前の場合は Primitive にフォールバックします。
 
 ## 必要環境
 
@@ -70,19 +70,21 @@ Assets/Scripts/
   Player/      移動・体力・TPSカメラ
   Combat/      武器・ヒットスキャン・ドロップ
   Enemies/     ゾンビAI・ウェーブ
-  World/       街区生成
+  World/       街区生成・Kenneyアセット読込
   UI/          iPadタッチHUD
   Audio/       手続き型SE
 ```
+
+見た目のモデルは `Assets/Resources/Kenney/` にあります（Characters / Buildings / City / Weapons）。出典は `Assets/Art/THIRD_PARTY.txt`。
 
 数値調整は `GameConfig` と `WeaponStats` が中心です。
 
 ## これから足すと「本格」が一段上がるもの
 
-- 人型アニメーション / 銃モデル（Mixamo やアセット）
+- 人型アニメーション（Kenney の idle/run クリップを Animator に接続）
 - NavMesh のベイク（建物裏への回り込み）
 - URP + ポストプロセス（ブルーム、色収差）
 - ストーリー・セーフルーム・武器拾い
 - Game Center ランキング
 
-Primitive のままでも、Unity で Play すれば即プレイできる状態です。
+Primitive フォールバック付きなので、Unity で開いてインポートが終われば Kenney モデルで即プレイできます。

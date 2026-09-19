@@ -25,20 +25,18 @@ namespace ShikiShiro
             _controller.minMoveDistance = 0f;
             _controller.slopeLimit = 45f;
 
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            visual.name = "Body";
-            visual.transform.SetParent(transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            visual.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.18f, 0.22f, 0.28f), 0.2f, 0.35f);
-            Destroy(visual.GetComponent<Collider>());
+            GameObject visual = GameAssets.AttachCharacter(transform, GameAssets.SkinHuman);
+            if (visual == null)
+            {
+                visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                visual.name = "Body";
+                visual.transform.SetParent(transform, false);
+                visual.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+                visual.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.18f, 0.22f, 0.28f), 0.2f, 0.35f);
+                Destroy(visual.GetComponent<Collider>());
+            }
 
-            var vest = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            vest.name = "Vest";
-            vest.transform.SetParent(transform, false);
-            vest.transform.localPosition = new Vector3(0f, 1.05f, 0.05f);
-            vest.transform.localScale = new Vector3(0.7f, 0.45f, 0.38f);
-            vest.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.Create(new Color(0.12f, 0.14f, 0.12f), 0.15f, 0.2f);
-            Destroy(vest.GetComponent<Collider>());
+            GameAssets.SetLayerRecursively(visual, gameObject.layer);
 
             var head = new GameObject("Head");
             head.transform.SetParent(transform, false);
@@ -93,6 +91,5 @@ namespace ShikiShiro
             Vector3 velocity = planar * speed + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
         }
-
     }
 }
