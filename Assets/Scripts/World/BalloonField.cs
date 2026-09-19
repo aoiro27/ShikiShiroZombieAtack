@@ -10,55 +10,96 @@ namespace ShikiShiro
     {
         private const int Count = 72;
 
+        private ArenaBuilder _arena;
+        private HordeDirector _horde;
+        private CombatFx _fx;
+        private ProceduralSfx _sfx;
+        private Sprite[] _sprites;
+        private readonly List<BalloonProp> _balloons = new List<BalloonProp>(Count);
+
         public static BalloonField Spawn(Transform parent, ArenaBuilder arena, HordeDirector horde, CombatFx fx, ProceduralSfx sfx)
         {
             var root = new GameObject("BalloonField");
             root.transform.SetParent(parent, false);
             var field = root.AddComponent<BalloonField>();
-            field.Build(arena, horde, fx, sfx);
+            field._arena = arena;
+            field._horde = horde;
+            field._fx = fx;
+            field._sfx = sfx;
+            field._sprites = LoadSprites();
+            if (field._sprites.Length == 0)
+            {
+                Debug.LogWarning("Balloon sprites were not found. Import Free Balloons into Resources/Balloons.");
+            }
+
             return field;
         }
 
-        private void Build(ArenaBuilder arena, HordeDirector horde, CombatFx fx, ProceduralSfx sfx)
+        public void Respawn()
         {
-            Sprite[] sprites = LoadSprites();
-            if (sprites.Length == 0)
+            if (_sprites == null || _sprites.Length == 0)
             {
-                Debug.LogWarning("Balloon sprites were not found. Import Free Balloons into Resources/Balloons.");
+                _sprites = LoadSprites();
+            }
+
+            if (_sprites.Length == 0 || _arena == null)
+            {
                 return;
             }
 
-            Vector3 spawn = arena.SpawnPoint;
-            float minKeep = 8f;
-            float minKeepSqr = minKeep * minKeep;
-            int placed = 0;
-            int guard = 0;
-            while (placed < Count && guard < Count * 12)
+            EnsurePool();
+            for (int i = 0; i < _balloons.Count; i++)
             {
-                guard++;
-                float angle = Random.Range(0f, 360f);
-                float radius = Random.Range(10f, Mathf.Min(arena.PlayHalf * 0.78f, 48f));
-                Vector3 ground = spawn + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * radius;
-                ground = arena.SnapToStreet(ground);
-                ground = arena.ClampInside(ground, 2.4f);
-                Vector2 away = new Vector2(ground.x - spawn.x, ground.z - spawn.z);
-                if (away.sqrMagnitude < minKeepSqr)
+                BalloonProp balloon = _balloons[i];
+                if (balloon == null)
                 {
                     continue;
                 }
 
-                if (!arena.Contains(ground, 2.4f))
+                if (!TryPlace(out Vector3 pos))
                 {
+                    balloon.gameObject.SetActive(false);
                     continue;
                 }
 
-                Vector3 pos = ground + Vector3.up * Random.Range(2.2f, 5.4f);
+                balloon.Setup(_sprites[Random.Range(0, _sprites.Length)], pos, _horde, _fx, _sfx);
+            }
+        }
+
+        private void EnsurePool()
+        {
+            while (_balloons.Count < Count)
+            {
                 var go = new GameObject("Balloon");
                 go.transform.SetParent(transform, false);
-                var prop = go.AddComponent<BalloonProp>();
-                prop.Setup(sprites[Random.Range(0, sprites.Length)], pos, horde, fx, sfx);
-                placed++;
+                go.SetActive(false);
+                _balloons.Add(go.AddComponent<BalloonProp>());
             }
+        }
+
+        private bool TryPlace(out Vector3 pos)
+        {
+            pos = Vector3.zero;
+            Vector3 spawn = _arena.SpawnPoint;
+            float minKeepSqr = 8f * 8f;
+            for (int i = 0; i < 12; i++)
+            {
+                float angle = Random.Range(0f, 360f);
+                float radius = Random.Range(10f, Mathf.Min(_arena.PlayHalf * 0.78f, 48f));
+                Vector3 ground = spawn + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * radius;
+                ground = _arena.SnapToStreet(ground);
+                ground = _arena.ClampInside(ground, 2.4f);
+                Vector2 away = new Vector2(ground.x - spawn.x, ground.z - spawn.z);
+                if (away.sqrMagnitude < minKeepSqr || !_arena.Contains(ground, 2.4f))
+                {
+                    continue;
+                }
+
+                pos = ground + Vector3.up * Random.Range(2.2f, 5.4f);
+                return true;
+            }
+
+            return false;
         }
 
         private static Sprite[] LoadSprites()
@@ -87,22 +128,19 @@ namespace ShikiShiro
         private static void CollectEditorSprites(List<Sprite> list)
         {
 #if UNITY_EDITOR
-            string[] folders = { "Assets/Qookie Games/Balloons Free", "Assets/Resources/Balloons" };
-            for (int f = 0; f < folders.Length; f++)
+            const string folder = "Assets/Resources/Balloons";
+            if (!AssetDatabase.IsValidFolder(folder))
             {
-                if (!AssetDatabase.IsValidFolder(folders[f]))
-                {
-                    continue;
-                }
+                return;
+            }
 
-                string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folders[f] });
-                for (int i = 0; i < guids.Length; i++)
+            string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folder });
+            for (int i = 0; i < guids.Length; i++)
+            {
+                Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (sprite != null)
                 {
-                    Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(guids[i]));
-                    if (sprite != null)
-                    {
-                        list.Add(sprite);
-                    }
+                    list.Add(sprite);
                 }
             }
 #endif

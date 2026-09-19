@@ -14,6 +14,7 @@ namespace ShikiShiro
         private ProceduralSfx _sfx;
         private ObjectPool<ZombieAgent> _zombies;
         private ObjectPool<WorldPickup> _pickups;
+        private BalloonField _balloons;
         private int _alive;
         private HudController _hud;
 
@@ -37,7 +38,7 @@ namespace ShikiShiro
             pickupRoot.SetParent(transform, false);
             _pickups = new ObjectPool<WorldPickup>(CreatePickup, pickupRoot, 12);
 
-            BalloonField.Spawn(transform, arena, this, fx, sfx);
+            _balloons = BalloonField.Spawn(transform, arena, this, fx, sfx);
         }
 
         public void StartWaves()
@@ -162,6 +163,11 @@ namespace ShikiShiro
                 ResetPlayerToStart();
                 Physics.SyncTransforms();
                 _alive = 0;
+                if (_balloons != null)
+                {
+                    _balloons.Respawn();
+                }
+
                 SpawnWave(WaveSize(wave), wave);
 
                 yield return WaveCountdown(wave);

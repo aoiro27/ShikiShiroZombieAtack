@@ -40,7 +40,6 @@ namespace ShikiShiro.EditorTools
             var origin = arena.SpawnPoint + Vector3.up * 1.6f;
             log.AppendLine($"spawn={arena.SpawnPoint} radius={arena.Radius}");
             log.AppendLine($"kaykitA={Resources.Load<GameObject>("KayKit/building_A")}");
-            log.AppendLine($"rifle={AssetDatabase.LoadAssetAtPath<GameObject>("Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab")}");
 
             GameObject[] roots = preview.GetRootGameObjects();
             int rendererCount = 0;

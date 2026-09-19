@@ -43,15 +43,12 @@ Visual models (CC0, Unity-ready):
 
 - Infima Games Low Poly Shooter Pack - Free Sample (Asset Store)
   First-person arms + handgun/AR viewmodel: Assets/Infima Games/Low Poly Shooter Pack - Free Sample
-  Pack gameplay scripts are isolated and not compiled into this game.
 
 - Alteruna Multiplayer FPS Template (Asset Store)
-  Pistol viewmodel + GunShot: Assets/AlterunaFPS
-  Network scripts are isolated and not compiled into this game.
+  Shotgun viewmodel meshes only: Assets/AlterunaFPS/Models
 
 Unity Asset Store (standard EULA), used at runtime:
 
 - FREE Shirtless Zombie (Studio New Punch)
 - FREE Zombie Male AAB (Studio New Punch)
-- FPS Gun 4K - Assault Rifle 1 (Heart State Games)
 - Character Pack: Zombie Sample (Supercyan)

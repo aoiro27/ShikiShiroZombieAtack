@@ -387,53 +387,15 @@ namespace ShikiShiro
                 new Vector3(5f, -16f, 3f),
                 new Vector3(8f, -14f, 6f)
             };
-            float[] lengths = { 0.55f, 0.78f, 0.88f };
 
-            string[] paths = { GameAssets.Pistol, GameAssets.Smg, GameAssets.Shotgun };
-            _gunVisuals = new GameObject[paths.Length];
-            _gunAnimators = new Animator[paths.Length];
+            _gunVisuals = new GameObject[3];
+            _gunAnimators = new Animator[3];
             if (TryAttachInfimaViewmodel(viewLayer))
             {
                 _muzzle = new GameObject("Muzzle").transform;
                 _muzzle.SetParent(_camera.transform, false);
                 PlaceMuzzle();
                 return;
-            }
-
-            TryAttachAlterunaPistol(viewLayer, lengths[0]);
-            for (int i = 0; i < paths.Length; i++)
-            {
-                if (_gunVisuals[i] != null)
-                {
-                    continue;
-                }
-
-                GameObject gun = GameAssets.TryInstantiate(paths[i], _viewRoot);
-                if (gun == null)
-                {
-                    continue;
-                }
-
-                foreach (Collider collider in gun.GetComponentsInChildren<Collider>())
-                {
-                    Destroy(collider);
-                }
-
-                foreach (Renderer renderer in gun.GetComponentsInChildren<Renderer>())
-                {
-                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    renderer.receiveShadows = false;
-                }
-
-                StyleWeapon(gun, i);
-                AlignViewmodel(gun, lengths[i]);
-                if (viewLayer >= 0)
-                {
-                    GameAssets.SetLayerRecursively(gun, viewLayer);
-                }
-
-                _gunVisuals[i] = gun;
-                gun.SetActive(false);
             }
 
             if (_gunVisuals[0] == null)
@@ -459,54 +421,6 @@ namespace ShikiShiro
             _muzzle.localPosition = new Vector3(0.05f, -0.02f, 0.72f);
         }
 
-        private void TryAttachAlterunaPistol(int viewLayer, float length)
-        {
-            GameObject player = GameAssets.TryInstantiate("Assets/AlterunaFPS/Prefab/Player.prefab", _viewRoot);
-            if (player == null)
-            {
-                return;
-            }
-
-            Transform gunRoot = FindDeep(player.transform, "GunRoot");
-            if (gunRoot == null)
-            {
-                Destroy(player);
-                return;
-            }
-
-            foreach (CharacterController controller in player.GetComponentsInChildren<CharacterController>())
-            {
-                Destroy(controller);
-            }
-
-            gunRoot.SetParent(_viewRoot, false);
-            gunRoot.localPosition = Vector3.zero;
-            gunRoot.localRotation = Quaternion.identity;
-            gunRoot.localScale = Vector3.one;
-            Destroy(player);
-
-            foreach (Collider collider in gunRoot.GetComponentsInChildren<Collider>())
-            {
-                Destroy(collider);
-            }
-
-            foreach (Renderer renderer in gunRoot.GetComponentsInChildren<Renderer>())
-            {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-            }
-
-            AlignViewmodel(gunRoot.gameObject, length);
-            if (viewLayer >= 0)
-            {
-                GameAssets.SetLayerRecursively(gunRoot.gameObject, viewLayer);
-            }
-
-            _gunVisuals[0] = gunRoot.gameObject;
-            _gunAnimators[0] = gunRoot.GetComponentInChildren<Animator>();
-            gunRoot.gameObject.SetActive(false);
-        }
-
         private static Transform FindDeep(Transform root, string name)
         {
             if (root.name == name)
@@ -524,90 +438,6 @@ namespace ShikiShiro
             }
 
             return null;
-        }
-
-        private static void StyleWeapon(GameObject gun, int index)
-        {
-            string[] hide = index switch
-            {
-                0 => new[] { "Scope", "Stock", "Cage", "Foregrip" },
-                1 => new[] { "Scope" },
-                _ => new[] { "Scope", "Cage" }
-            };
-
-            Transform[] parts = gun.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == gun.transform)
-                {
-                    continue;
-                }
-
-                string n = parts[i].name;
-                for (int h = 0; h < hide.Length; h++)
-                {
-                    if (n.IndexOf(hide[h], StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        parts[i].gameObject.SetActive(false);
-                        break;
-                    }
-                }
-            }
-
-        }
-
-        private static void AlignViewmodel(GameObject gun, float length)
-        {
-            Transform t = gun.transform;
-            Transform parent = t.parent;
-            t.localPosition = Vector3.zero;
-            t.localRotation = Quaternion.identity;
-            t.localScale = Vector3.one;
-
-            Transform barrel = FindPart(gun, "Main_Barrel", "Muzzle", "Barrel_Upper");
-            Transform stock = FindPart(gun, "Stock_Main1", "Stock_Lower_Part", "Stock_holder");
-            if (barrel != null && stock != null && parent != null)
-            {
-                Vector3 dir = parent.InverseTransformDirection(barrel.position - stock.position);
-                if (dir.sqrMagnitude > 0.0001f)
-                {
-                    t.localRotation = Quaternion.FromToRotation(dir.normalized, Vector3.forward);
-                }
-            }
-            else
-            {
-                Bounds? bounds = GameAssets.WorldBounds(gun);
-                if (bounds.HasValue)
-                {
-                    Vector3 size = bounds.Value.size;
-                    if (size.x >= size.z && size.x >= size.y)
-                    {
-                        t.localRotation = Quaternion.Euler(0f, -90f, 0f);
-                    }
-                    else if (size.y >= size.z && size.y >= size.x)
-                    {
-                        t.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-                    }
-                }
-            }
-
-            if (parent == null || !LocalAabb(gun, parent, out Vector3 min, out Vector3 max))
-            {
-                return;
-            }
-
-            float current = Mathf.Max(0.001f, max.z - min.z);
-            t.localScale *= length / current;
-            if (!LocalAabb(gun, parent, out min, out max))
-            {
-                return;
-            }
-
-            Vector3 pivot = new Vector3(
-                (min.x + max.x) * 0.5f,
-                min.y + (max.y - min.y) * 0.2f,
-                min.z + (max.z - min.z) * 0.16f);
-            t.localPosition -= pivot;
         }
 
         private void PlaceMuzzle()

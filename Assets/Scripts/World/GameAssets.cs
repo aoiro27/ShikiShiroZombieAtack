@@ -14,15 +14,11 @@ namespace ShikiShiro
         public const string ZombieRunner = "Characters/ZombieMale_AAB";
         public const string ZombieBrute = "Characters/FreeZombie";
 
-        public const string Pistol = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
-        public const string Smg = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
-        public const string Shotgun = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string InfimaFps = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/P_LPSP_FP_CH.prefab";
         public const string ShotgunPump = "Assets/AlterunaFPS/Models/Shotgun_Pump_East.RIg.fbx";
         public const string ShotgunAuto = "Assets/AlterunaFPS/Models/Shotgun_Auto_East.Rig.fbx";
         public const string AmmoCrate = "KayKit/box_A";
         public const string MedkitCrate = "KayKit/box_A";
-        public const string WeaponAtlas = "Kenney/Weapons/Textures/colormap";
         public const string CityAtlas = "KayKit/citybits_texture";
 
         public static T Load<T>(string path) where T : Object
@@ -70,7 +66,7 @@ namespace ShikiShiro
 
             go.transform.SetPositionAndRotation(position, rotation);
             go.transform.localScale = Vector3.one;
-            Paint(go, path);
+            Paint(go);
             Unbake(go);
             if (height > 0.1f)
             {
@@ -108,43 +104,6 @@ namespace ShikiShiro
             }
 
             return visual;
-        }
-
-        public static Vector3 Measure(string path)
-        {
-            GameObject prefab = LoadPrefab(path);
-            if (prefab == null)
-            {
-                return Vector3.one * 2f;
-            }
-
-            MeshFilter[] filters = prefab.GetComponentsInChildren<MeshFilter>();
-            if (filters.Length == 0)
-            {
-                return Vector3.one * 2f;
-            }
-
-            Bounds bounds = filters[0].sharedMesh != null ? filters[0].sharedMesh.bounds : new Bounds(Vector3.zero, Vector3.one);
-            for (int i = 0; i < filters.Length; i++)
-            {
-                if (filters[i].sharedMesh == null)
-                {
-                    continue;
-                }
-
-                Bounds local = filters[i].sharedMesh.bounds;
-                Vector3 worldSize = Vector3.Scale(local.size, filters[i].transform.lossyScale);
-                bounds.Encapsulate(new Bounds(filters[i].transform.localPosition, worldSize));
-            }
-
-            Vector3 size = bounds.size;
-            float mag = Mathf.Max(size.x, size.y, size.z);
-            if (!KeepsAuthoredLook(path) && mag > 0.0001f && mag < 0.5f)
-            {
-                size *= 100f;
-            }
-
-            return size;
         }
 
         public static Bounds? WorldBounds(GameObject go)
@@ -260,17 +219,9 @@ namespace ShikiShiro
             }
         }
 
-        public static void BindColormap(GameObject go, string atlasPath)
+        public static void Paint(GameObject go)
         {
-            Paint(go, atlasPath);
-        }
-
-        public static void Paint(GameObject go, string path)
-        {
-            Texture2D atlas = GuessAtlas(path) == WeaponAtlas
-                ? Load<Texture2D>(WeaponAtlas)
-                : LoadCityAtlas();
-            Material mat = MaterialFactory.Create(Color.white, atlas);
+            Material mat = MaterialFactory.Create(Color.white, LoadCityAtlas());
             foreach (Renderer renderer in go.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.sharedMaterial = mat;
@@ -445,26 +396,6 @@ namespace ShikiShiro
             {
                 go.transform.localScale *= height / bounds.Value.size.y;
             }
-        }
-
-        private static string GuessAtlas(string path)
-        {
-            if (path.Contains("/KayKit/") || path.StartsWith("KayKit/"))
-            {
-                return CityAtlas;
-            }
-
-            if (path.Contains("/Quaternius/"))
-            {
-                return ZombieAtlas;
-            }
-
-            if (path.Contains("/Weapons/"))
-            {
-                return WeaponAtlas;
-            }
-
-            return CityAtlas;
         }
 
         private static void ClampFootprint(GameObject go, float maxXZ)

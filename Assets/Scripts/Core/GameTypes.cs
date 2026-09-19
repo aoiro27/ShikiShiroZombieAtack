@@ -85,12 +85,7 @@ namespace ShikiShiro
         public float GyroLookSensitivity = 1.85f;
         public float EditorLookSensitivity = 0.18f;
         public float PlayerMaxHealth = 100f;
-        public float CameraDistance = 3.6f;
-        public float CameraHeight = 1.55f;
-        public float CameraCollisionRadius = 0.22f;
-        public int MaxAliveZombies = 56;
         public int ZombiePoolSize = 96;
-        public float PickupDropChance = 0.1f;
         public string HighScoreKey = "ssza.highscore";
     }
 }

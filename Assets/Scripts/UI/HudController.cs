@@ -583,11 +583,15 @@ namespace ShikiShiro
             var mlRt = moveLabel.rectTransform;
             mlRt.anchorMin = mlRt.anchorMax = mlRt.pivot = new Vector2(0.5f, 0f);
             mlRt.anchoredPosition = new Vector2(0f, -36f);
-            LookStick = CreateJoystick(safeGo.transform, new Vector2(-420, 210), "LookStick", new Vector2(220, 220), 82f);
+            const float rightPad = 48f;
+            const float fireSize = 228f;
+            const float lookSize = 220f;
+            const float lookGap = 16f;
+            CreateFireButton(safeGo.transform, new Vector2(-rightPad, 56f), new Vector2(fireSize, fireSize), _input.SetTouchFire);
+            LookStick = CreateJoystick(safeGo.transform, Vector2.zero, "LookStick", new Vector2(lookSize, lookSize), 82f);
             var lookRt = LookStick.GetComponent<RectTransform>();
             lookRt.anchorMin = lookRt.anchorMax = lookRt.pivot = new Vector2(1f, 0f);
-
-            CreateFireButton(safeGo.transform, new Vector2(-140, 176), new Vector2(228, 228), _input.SetTouchFire);
+            lookRt.anchoredPosition = new Vector2(-rightPad - (fireSize - lookSize) * 0.5f, 56f + fireSize + lookGap);
             var sprint = CreateHoldButton(safeGo.transform, new Vector2(420, 400), "SPRINT", UiSprites.Sprint, new Vector2(128, 128), _input.SetTouchSprint);
             var sprintRt = sprint.GetComponent<RectTransform>();
             sprintRt.anchorMin = sprintRt.anchorMax = sprintRt.pivot = new Vector2(0f, 0f);

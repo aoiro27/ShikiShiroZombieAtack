@@ -272,10 +272,6 @@ namespace ShikiShiro
         private static AudioClip LoadWaveClearClip()
         {
             AudioClip clip = Resources.Load<AudioClip>("clear");
-            if (clip == null)
-            {
-                clip = GameAssets.Load<AudioClip>("Assets/clear.mp3");
-            }
 
             if (clip != null && !clip.preloadAudioData)
             {

@@ -83,7 +83,7 @@ namespace ShikiShiro
             {
                 visual.transform.localPosition = Vector3.zero;
                 visual.transform.localScale = Vector3.one * 0.7f;
-                GameAssets.BindColormap(visual, GameAssets.CityAtlas);
+                GameAssets.Paint(visual);
                 foreach (Collider collider in visual.GetComponentsInChildren<Collider>())
                 {
                     Destroy(collider);
