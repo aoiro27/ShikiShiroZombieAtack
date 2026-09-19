@@ -1,0 +1,16 @@
+{
+    "name": "AlterunaFPS",
+    "rootNamespace": "AlterunaFPS",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "ALTERUNA_FPS_ENABLE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

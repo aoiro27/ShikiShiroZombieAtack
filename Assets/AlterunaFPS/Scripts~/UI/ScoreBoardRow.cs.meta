@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 65910bed817f5c9458c6ff67f11b0388
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259143
+  packageName: Multiplayer FPS Template
+  packageVersion: 1.2.2
+  assetPath: Assets/AlterunaFPS/Scripts/UI/ScoreBoardRow.cs
+  uploadId: 987820

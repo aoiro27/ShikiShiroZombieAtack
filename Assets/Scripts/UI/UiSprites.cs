@@ -19,6 +19,7 @@ namespace ShikiShiro
         public static Sprite White { get; private set; }
         public static Sprite Blip { get; private set; }
         public static Sprite Arrow { get; private set; }
+        public static Sprite FacingCone { get; private set; }
 
         public static void Ensure()
         {
@@ -51,6 +52,11 @@ namespace ShikiShiro
             if (Arrow == null)
             {
                 Arrow = MakeArrow();
+            }
+
+            if (FacingCone == null)
+            {
+                FacingCone = MakeFacingCone();
             }
         }
 
@@ -222,6 +228,41 @@ namespace ShikiShiro
                     float ny = (y / (float)(s - 1)) * 2f - 1f;
                     bool inside = ny > -0.7f && ny < 0.85f && Mathf.Abs(nx) < (0.82f - ny) * 0.62f;
                     px[y * s + x] = inside ? Color.white : Color.clear;
+                }
+            }
+
+            return ToSprite(px, s, s);
+        }
+
+        private static Sprite MakeFacingCone()
+        {
+            const int s = 256;
+            var px = new Color[s * s];
+            float c = (s - 1) * 0.5f;
+            const float halfFov = 42f * Mathf.Deg2Rad;
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    float dx = x - c;
+                    float dy = y - c;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy) / c;
+                    if (dist > 0.98f || dist < 0.02f)
+                    {
+                        continue;
+                    }
+
+                    float ang = Mathf.Atan2(dx, dy);
+                    float a = Mathf.Abs(ang);
+                    if (a > halfFov)
+                    {
+                        continue;
+                    }
+
+                    float edge = 1f - Mathf.InverseLerp(halfFov * 0.82f, halfFov, a);
+                    float fall = 1f - dist;
+                    float alpha = Mathf.Clamp01(fall * 0.55f + edge * 0.35f) * 0.85f;
+                    px[y * s + x] = new Color(0.25f, 1f, 0.45f, alpha);
                 }
             }
 

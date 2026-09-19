@@ -157,8 +157,8 @@ namespace ShikiShiro
             Time.timeScale = _paused ? 0f : 1f;
             _pauseGroup.alpha = _paused ? 1f : 0f;
             _pauseGroup.blocksRaycasts = _paused;
-            Cursor.lockState = _paused ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = _paused;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
 
         private void BuildCanvas()
@@ -179,8 +179,23 @@ namespace ShikiShiro
             if (es == null)
             {
                 var esGo = new GameObject("EventSystem");
-                esGo.AddComponent<EventSystem>();
-                esGo.AddComponent<StandaloneInputModule>();
+                es = esGo.AddComponent<EventSystem>();
+            }
+
+            foreach (BaseInputModule module in es.GetComponents<BaseInputModule>())
+            {
+                if (module is StandaloneInputModule)
+                {
+                    continue;
+                }
+
+                module.enabled = false;
+                Destroy(module);
+            }
+
+            if (es.GetComponent<StandaloneInputModule>() == null)
+            {
+                es.gameObject.AddComponent<StandaloneInputModule>();
             }
 
             Rect safe = Screen.safeArea;
@@ -192,6 +207,7 @@ namespace ShikiShiro
             safeRt.anchorMax = max;
             safeRt.offsetMin = Vector2.zero;
             safeRt.offsetMax = Vector2.zero;
+            safeGo.GetComponent<Image>().raycastTarget = false;
 
             _healthFill = CreateHealthGauge(safeGo.transform, new Vector2(24, -24), new Vector2(460, 72));
             _wave = CreateHudPlate(safeGo.transform, "Wave", new Vector2(0, -24), new Vector2(280, 78), new Vector2(0.5f, 1f), TextAnchor.MiddleCenter);
@@ -280,6 +296,11 @@ namespace ShikiShiro
             _pauseGroup.alpha = 0f;
             _pauseGroup.blocksRaycasts = false;
             pausePanel.GetComponent<Image>().raycastTarget = false;
+            Transform rack = safeGo.transform.Find("WeaponRack");
+            if (rack != null)
+            {
+                rack.SetAsLastSibling();
+            }
         }
 
         private void CreateWeaponRack(Transform parent)
@@ -290,17 +311,17 @@ namespace ShikiShiro
             var rack = new GameObject("WeaponRack", typeof(RectTransform));
             rack.transform.SetParent(parent, false);
             var rackRt = rack.GetComponent<RectTransform>();
-            rackRt.anchorMin = rackRt.anchorMax = rackRt.pivot = new Vector2(1f, 0f);
-            rackRt.anchoredPosition = new Vector2(-36f, 420f);
-            rackRt.sizeDelta = new Vector2(520f, 110f);
+            rackRt.anchorMin = rackRt.anchorMax = rackRt.pivot = new Vector2(0f, 0f);
+            rackRt.anchoredPosition = new Vector2(36f, 390f);
+            rackRt.sizeDelta = new Vector2(168f, 320f);
 
             for (int i = 0; i < icons.Length; i++)
             {
                 int index = i;
                 var frame = CreateSprite(rack.transform, "WeaponSlot" + i, UiSprites.Panel, new Color(1f, 1f, 1f, 0.92f));
                 var rt = frame.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
-                rt.anchoredPosition = new Vector2(-8f - i * 168f, 0f);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
+                rt.anchoredPosition = new Vector2(0f, 8f + i * 104f);
                 rt.sizeDelta = new Vector2(158f, 96f);
                 var frameImg = frame.GetComponent<Image>();
                 frameImg.type = Image.Type.Sliced;
@@ -321,6 +342,10 @@ namespace ShikiShiro
                 var button = frame.AddComponent<Button>();
                 button.transition = Selectable.Transition.None;
                 button.onClick.AddListener(() => _weapons.SelectWeapon(index));
+                var trigger = frame.AddComponent<EventTrigger>();
+                var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+                down.callback.AddListener(_ => _weapons.SelectWeapon(index));
+                trigger.triggers.Add(down);
             }
         }
 

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 3fd594e5750841eaa1f539e66b9f48fa
+timeCreated: 1687167198
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259143
+  packageName: Multiplayer FPS Template
+  packageVersion: 1.2.2
+  assetPath: Assets/AlterunaFPS/Scripts/Player/PlayerController.AngleNormalization.cs
+  uploadId: 987820

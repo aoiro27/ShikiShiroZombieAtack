@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 81d7e058965f410fa343a1675677a444
+timeCreated: 1691564479
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259143
+  packageName: Multiplayer FPS Template
+  packageVersion: 1.2.2
+  assetPath: Assets/AlterunaFPS/Scripts/UI/GameInitRead.cs
+  uploadId: 987820

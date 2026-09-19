@@ -39,7 +39,7 @@ namespace ShikiShiro
 
         public static WeaponStats Smg()
         {
-            return new WeaponStats(WeaponId.Smg, "ベクター SMG", 16f, 0.075f, 30, 1.7f, 3.2f, 1, 55f, 0.9f, 150);
+            return new WeaponStats(WeaponId.Smg, "アサルトライフル", 18f, 0.09f, 30, 1.7f, 1.6f, 1, 80f, 1.1f, 150);
         }
 
         public static WeaponStats Shotgun()

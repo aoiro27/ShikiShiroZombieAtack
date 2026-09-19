@@ -10,6 +10,7 @@ namespace ShikiShiro
         private const float ViewRange = 48f;
 
         private RectTransform _overlay;
+        private RectTransform _facingCone;
         private RectTransform _playerBlip;
         private RectTransform[] _enemyBlips;
         private float _half;
@@ -57,7 +58,9 @@ namespace ShikiShiro
             var hud = go.AddComponent<MinimapHud>();
             hud._overlay = overlay;
             hud._half = (Size - 24f) * 0.5f;
-            hud._playerBlip = MakeBlip(overlay, "Player", UiSprites.Arrow, new Color(0.15f, 0.95f, 1f, 1f), 16f);
+            hud._facingCone = MakeBlip(overlay, "Facing", UiSprites.FacingCone, Color.white, Size - 36f);
+            hud._playerBlip = MakeBlip(overlay, "Player", UiSprites.Blip, new Color(0.2f, 1f, 0.55f, 1f), 14f);
+            MakeBlip(hud._playerBlip, "Core", UiSprites.Blip, new Color(0.9f, 1f, 0.95f, 1f), 7f);
             hud._enemyBlips = new RectTransform[MaxBlips];
             for (int i = 0; i < MaxBlips; i++)
             {
@@ -65,6 +68,7 @@ namespace ShikiShiro
                 hud._enemyBlips[i].gameObject.SetActive(false);
             }
 
+            hud._facingCone.SetAsFirstSibling();
             hud._playerBlip.SetAsLastSibling();
             return hud;
         }
@@ -84,7 +88,14 @@ namespace ShikiShiro
 
             _playerBlip.gameObject.SetActive(true);
             _playerBlip.anchoredPosition = Vector2.zero;
-            _playerBlip.localEulerAngles = new Vector3(0f, 0f, -_player.eulerAngles.y);
+            _playerBlip.localEulerAngles = Vector3.zero;
+            if (_facingCone != null)
+            {
+                _facingCone.gameObject.SetActive(true);
+                _facingCone.anchoredPosition = Vector2.zero;
+                _facingCone.localEulerAngles = new Vector3(0f, 0f, -_player.eulerAngles.y);
+            }
+
             _playerBlip.SetAsLastSibling();
 
             if (_horde == null)

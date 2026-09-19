@@ -17,6 +17,9 @@ namespace ShikiShiro
         public const string Pistol = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string Smg = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
         public const string Shotgun = "Assets/4K 3D Weapons Mega Pack/Rifle 1/Prefabs/Rifle 1.prefab";
+        public const string InfimaFps = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/P_LPSP_FP_CH.prefab";
+        public const string ShotgunPump = "Assets/AlterunaFPS/Models/Shotgun_Pump_East.RIg.fbx";
+        public const string ShotgunAuto = "Assets/AlterunaFPS/Models/Shotgun_Auto_East.Rig.fbx";
         public const string AmmoCrate = "KayKit/box_A";
         public const string MedkitCrate = "KayKit/box_A";
         public const string WeaponAtlas = "Kenney/Weapons/Textures/colormap";

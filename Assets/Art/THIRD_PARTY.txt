@@ -41,6 +41,14 @@ Visual models (CC0, Unity-ready):
   Fire button: Assets/Resources/Ui/fire_button.png
   Move stick well/cap: Assets/Resources/Ui/stick_base.png, stick_knob.png
 
+- Infima Games Low Poly Shooter Pack - Free Sample (Asset Store)
+  First-person arms + handgun/AR viewmodel: Assets/Infima Games/Low Poly Shooter Pack - Free Sample
+  Pack gameplay scripts are isolated and not compiled into this game.
+
+- Alteruna Multiplayer FPS Template (Asset Store)
+  Pistol viewmodel + GunShot: Assets/AlterunaFPS
+  Network scripts are isolated and not compiled into this game.
+
 Unity Asset Store (standard EULA), used at runtime:
 
 - FREE Shirtless Zombie (Studio New Punch)

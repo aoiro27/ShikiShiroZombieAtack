@@ -30,7 +30,8 @@ namespace ShikiShiro.EditorTools
             }
 
             var scene = EditorSceneManager.GetActiveScene();
-            if (scene.IsValid() && !string.IsNullOrEmpty(scene.path))
+            bool foreign = scene.path.Contains("Infima Games") || scene.path.Contains("AlterunaFPS");
+            if (scene.IsValid() && !string.IsNullOrEmpty(scene.path) && !foreign)
             {
                 return;
             }

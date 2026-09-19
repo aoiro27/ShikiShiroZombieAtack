@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 1c07d1974225433c92b624c6a4390256
+timeCreated: 1688040011
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259143
+  packageName: Multiplayer FPS Template
+  packageVersion: 1.2.2
+  assetPath: Assets/AlterunaFPS/Scripts/Audio/GunAudio.cs
+  uploadId: 987820

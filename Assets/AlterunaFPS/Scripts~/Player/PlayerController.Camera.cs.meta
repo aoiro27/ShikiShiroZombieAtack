@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 4653b128a7b545b48e12be8611446576
+timeCreated: 1687360305
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259143
+  packageName: Multiplayer FPS Template
+  packageVersion: 1.2.2
+  assetPath: Assets/AlterunaFPS/Scripts/Player/PlayerController.Camera.cs
+  uploadId: 987820

@@ -1,0 +1,16 @@
+{
+    "name": "InfimaGames.Tools",
+    "rootNamespace": "InfimaGames.LowPolyShooterPack",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "INFIMA_LPSP_ENABLE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
