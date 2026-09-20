@@ -1,23 +1,31 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace ShikiShiro
 {
     [DefaultExecutionOrder(-100)]
     public sealed class Bootstrap : MonoBehaviour
     {
-        private static bool _started;
+        private static bool _restarting;
+        private static bool _bootLock;
+        private bool _booted;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
-            _started = false;
+            _restarting = false;
+            _bootLock = false;
+            HordeDirector.ResetStaticRun();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
         {
-            if (FindAnyObjectByType<Bootstrap>() != null)
+            _restarting = false;
+            var existing = FindAnyObjectByType<Bootstrap>();
+            if (existing != null)
             {
+                existing.BootIfNeeded();
                 return;
             }
 
@@ -25,14 +33,43 @@ namespace ShikiShiro
             root.AddComponent<Bootstrap>();
         }
 
-        private void Awake()
+        public static void RestartRun()
         {
-            if (_started)
+            if (_restarting)
             {
                 return;
             }
 
-            _started = true;
+            _restarting = true;
+            _bootLock = false;
+            HordeDirector.ResetStaticRun();
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.IsValid() && !string.IsNullOrEmpty(scene.path))
+            {
+                SceneManager.LoadScene(scene.path);
+                return;
+            }
+
+            SceneManager.LoadScene("Main");
+        }
+
+        private void Awake()
+        {
+            BootIfNeeded();
+        }
+
+        private void BootIfNeeded()
+        {
+            if (_booted || _bootLock)
+            {
+                return;
+            }
+
+            _bootLock = true;
+            _booted = true;
+            _restarting = false;
             Input.simulateMouseWithTouches = false;
             StripForeignSceneObjects();
             Application.targetFrameRate = 60;
@@ -46,6 +83,7 @@ namespace ShikiShiro
 
             var config = new GameConfig();
             var services = new GameObject("Systems");
+            services.transform.SetParent(transform, false);
 
             var session = services.AddComponent<GameSession>();
             session.Initialize(config);
@@ -58,6 +96,7 @@ namespace ShikiShiro
 
             int playerLayer = LayerMask.NameToLayer("Player");
             var playerGo = new GameObject("Player");
+            playerGo.transform.SetParent(transform, false);
             if (playerLayer >= 0)
             {
                 playerGo.layer = playerLayer;
@@ -78,6 +117,7 @@ namespace ShikiShiro
             vitality.Initialize(config, session);
 
             var camGo = new GameObject("FpsCamera");
+            camGo.transform.SetParent(transform, false);
             try
             {
                 camGo.tag = "MainCamera";
@@ -92,6 +132,7 @@ namespace ShikiShiro
             sfx.BindSession(session);
 
             var world = new GameObject("World").transform;
+            world.SetParent(transform, false);
             var arena = new ArenaBuilder(world);
             arena.Build();
             motor.BindArena(arena);
@@ -113,6 +154,7 @@ namespace ShikiShiro
             cameraRig.UnityCamera.targetDisplay = 0;
 
             var sunGo = new GameObject("Sun");
+            sunGo.transform.SetParent(transform, false);
             sunGo.transform.rotation = Quaternion.Euler(48f, 130f, 0f);
             var sun = sunGo.AddComponent<Light>();
             sun.type = LightType.Directional;
@@ -135,6 +177,7 @@ namespace ShikiShiro
             weapons.Initialize(input, motor, cameraRig, fx, sfx, session);
 
             var hudGo = new GameObject("HudSystem");
+            hudGo.transform.SetParent(transform, false);
             var hud = hudGo.AddComponent<HudController>();
             hud.Initialize(vitality, weapons, session, input, cameraRig);
             input.Bind(hud.MoveStick, hud.LookStick);
@@ -145,8 +188,23 @@ namespace ShikiShiro
             services.AddComponent<RestartOnTap>().Bind(session);
 
             session.BeginRun();
+            HordeDirector.ResetStaticRun();
             horde.StartWaves();
             hud.Announce("街区マップ");
+            DisableDuplicateDirectors(horde);
+        }
+
+        private static void DisableDuplicateDirectors(HordeDirector keep)
+        {
+            HordeDirector[] all = FindObjectsByType<HordeDirector>(FindObjectsInactive.Include);
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null && all[i] != keep)
+                {
+                    all[i].StopAllCoroutines();
+                    all[i].enabled = false;
+                }
+            }
         }
 
         private void StripForeignSceneObjects()

@@ -1,15 +1,32 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace ShikiShiro
 {
     public sealed class RestartOnTap : MonoBehaviour
     {
         private GameSession _session;
+        private float _readyAt;
 
         public void Bind(GameSession session)
         {
             _session = session;
+            session.StateChanged += OnState;
+        }
+
+        private void OnDestroy()
+        {
+            if (_session != null)
+            {
+                _session.StateChanged -= OnState;
+            }
+        }
+
+        private void OnState(SessionState state)
+        {
+            if (state == SessionState.GameOver)
+            {
+                _readyAt = Time.unscaledTime + 0.45f;
+            }
         }
 
         private void Update()
@@ -19,17 +36,34 @@ namespace ShikiShiro
                 return;
             }
 
-            bool pressed = Input.GetMouseButtonDown(0);
-            if (!pressed && Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+            if (Time.unscaledTime < _readyAt)
             {
-                pressed = true;
+                return;
             }
 
-            if (pressed)
+            if (Pressed())
             {
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(0);
+                Bootstrap.RestartRun();
             }
+        }
+
+        private static bool Pressed()
+        {
+            if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                TouchPhase phase = Input.GetTouch(i).phase;
+                if (phase == TouchPhase.Began || phase == TouchPhase.Ended)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

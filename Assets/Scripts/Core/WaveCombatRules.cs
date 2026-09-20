@@ -17,10 +17,5 @@ namespace ShikiShiro
         {
             return wave >= 3 ? 3 : 1;
         }
-
-        public static bool CanStartBossRound(int wave, int spawnedBossWave)
-        {
-            return wave >= 1 && spawnedBossWave != wave;
-        }
     }
 }

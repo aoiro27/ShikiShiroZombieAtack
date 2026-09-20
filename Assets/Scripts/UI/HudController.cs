@@ -22,10 +22,14 @@ namespace ShikiShiro
         private Text _announce;
         private Text _announceSub;
         private Text _gameOver;
+        private GameObject _gameOverRoot;
         private Image _clearFlash;
+        private Image _blastFill;
+        private float _blastAge = -1f;
         private float _announceUntil;
         private float _announcePunch = 1f;
         private float _clearFlashAlpha;
+        private Color _flashTint = new Color(1f, 0.86f, 0.35f);
         private float _flash;
         private float _biteAlpha;
         private float _biteScale;
@@ -133,6 +137,22 @@ namespace ShikiShiro
             _clearFlashAlpha = 0.72f;
         }
 
+        public void FlashExplosion()
+        {
+            BlastFullScreen();
+        }
+
+        public void BlastFullScreen()
+        {
+            _blastAge = 0f;
+            if (_blastFill != null)
+            {
+                _blastFill.gameObject.SetActive(true);
+                _blastFill.transform.SetAsLastSibling();
+                _blastFill.color = Color.white;
+            }
+        }
+
         public void ShowWaveStart(int wave)
         {
             ShowBanner("ウェーブ  " + wave, "ちかづいてる", new Color(1f, 0.45f, 0.22f), 64, 2.4f, 1.22f, 0.18f);
@@ -190,6 +210,7 @@ namespace ShikiShiro
             }
 
             _clearFlashAlpha = flash;
+            _flashTint = color;
             _announceUntil = Time.unscaledTime + seconds;
         }
 
@@ -235,8 +256,10 @@ namespace ShikiShiro
             _clearFlashAlpha = Mathf.MoveTowards(_clearFlashAlpha, 0f, udt * 1.15f);
             if (_clearFlash != null)
             {
-                _clearFlash.color = new Color(1f, 0.86f, 0.35f, _clearFlashAlpha);
+                _clearFlash.color = new Color(_flashTint.r, _flashTint.g, _flashTint.b, _clearFlashAlpha);
             }
+
+            TickBlastFill(udt);
 
             _countdownPunch = Mathf.MoveTowards(_countdownPunch, 1f, udt * 2.4f);
             if (_countdownNumber != null)
@@ -252,6 +275,45 @@ namespace ShikiShiro
             TickHurtFx();
         }
 
+        private void TickBlastFill(float udt)
+        {
+            if (_blastFill == null || _blastAge < 0f)
+            {
+                return;
+            }
+
+            _blastAge += udt;
+            const float hold = 0.55f;
+            const float fade = 1.35f;
+            Color tint;
+            float alpha;
+            if (_blastAge < 0.08f)
+            {
+                tint = Color.white;
+                alpha = 1f;
+            }
+            else if (_blastAge < hold)
+            {
+                float t = Mathf.InverseLerp(0.08f, hold, _blastAge);
+                tint = Color.Lerp(Color.white, new Color(1f, 0.45f, 0.08f), t);
+                alpha = 1f;
+            }
+            else
+            {
+                float t = Mathf.Clamp01((_blastAge - hold) / fade);
+                tint = Color.Lerp(new Color(1f, 0.38f, 0.05f), new Color(0.18f, 0.04f, 0.01f), t);
+                alpha = 1f - t;
+            }
+
+            _blastFill.color = new Color(tint.r, tint.g, tint.b, alpha);
+            if (_blastAge >= hold + fade)
+            {
+                _blastAge = -1f;
+                _blastFill.color = Color.clear;
+                _blastFill.gameObject.SetActive(false);
+            }
+        }
+
         private void OnHealth(float current, float max)
         {
             float ratio = max > 0f ? Mathf.Clamp01(current / max) : 0f;
@@ -264,6 +326,11 @@ namespace ShikiShiro
 
         private void OnDamaged(DamageInfo info)
         {
+            if (_vitality != null && _vitality.CurrentHealth <= 0f)
+            {
+                return;
+            }
+
             float intensity = Mathf.Clamp(info.Amount / 14f, 0.7f, 1.85f);
             _flash = Mathf.Max(_flash, 0.48f * intensity);
             _vignettePulse = Mathf.Max(_vignettePulse, 0.7f * intensity);
@@ -275,21 +342,8 @@ namespace ShikiShiro
             SpawnSplats(info.Direction, intensity);
         }
 
-        private void TickHurtFx()
+        private void ApplyOverlayColors(float wound = 0f)
         {
-            float dt = Time.deltaTime;
-            _flash = Mathf.MoveTowards(_flash, 0f, dt * 3.6f);
-            _vignettePulse = Mathf.MoveTowards(_vignettePulse, 0f, dt * 1.15f);
-            _biteAlpha = Mathf.MoveTowards(_biteAlpha, 0f, dt * 1.7f);
-            _biteScale = Mathf.MoveTowards(_biteScale, 1f, dt * 2.4f);
-            _healthPunch = Mathf.MoveTowards(_healthPunch, 1f, dt * 3.2f);
-
-            float wound = 0f;
-            if (_vitality != null && _vitality.MaxHealth > 0f)
-            {
-                wound = (1f - Mathf.Clamp01(_vitality.CurrentHealth / _vitality.MaxHealth)) * 0.48f;
-            }
-
             if (_hurt != null)
             {
                 _hurt.color = new Color(0.72f, 0.02f, 0.02f, _flash);
@@ -309,6 +363,38 @@ namespace ShikiShiro
                 _biteMark.color = b;
                 _biteMark.rectTransform.localScale = Vector3.one * _biteScale;
             }
+
+            if (_clearFlash != null)
+            {
+                _clearFlash.color = new Color(_flashTint.r, _flashTint.g, _flashTint.b, _clearFlashAlpha);
+            }
+        }
+
+        private void TickHurtFx()
+        {
+            float dt = Time.timeScale <= 0.001f ? Time.unscaledDeltaTime : Time.deltaTime;
+            _flash = Mathf.MoveTowards(_flash, 0f, dt * 3.6f);
+            _vignettePulse = Mathf.MoveTowards(_vignettePulse, 0f, dt * 1.15f);
+            _biteAlpha = Mathf.MoveTowards(_biteAlpha, 0f, dt * 1.7f);
+            _biteScale = Mathf.MoveTowards(_biteScale, 1f, dt * 2.4f);
+            _healthPunch = Mathf.MoveTowards(_healthPunch, 1f, dt * 3.2f);
+
+            float wound = 0f;
+            bool over = _session != null && _session.State == SessionState.GameOver;
+            if (!over && _vitality != null && _vitality.MaxHealth > 0f)
+            {
+                wound = (1f - Mathf.Clamp01(_vitality.CurrentHealth / _vitality.MaxHealth)) * 0.48f;
+            }
+
+            if (over)
+            {
+                wound = 0f;
+                _flash = 0f;
+                _vignettePulse = 0f;
+                _biteAlpha = 0f;
+            }
+
+            ApplyOverlayColors(wound);
 
             if (_healthPlate != null)
             {
@@ -450,6 +536,11 @@ namespace ShikiShiro
 
         private void RefreshWave()
         {
+            if (_wave == null || _session == null)
+            {
+                return;
+            }
+
             _wave.text = $"WAVE {_session.Wave}";
         }
 
@@ -460,14 +551,31 @@ namespace ShikiShiro
                 Time.timeScale = 0f;
                 _paused = false;
                 HideCountdown();
+                ClearBanners();
+                _flash = 0f;
+                _vignettePulse = 0f;
+                _biteAlpha = 0f;
+                _clearFlashAlpha = 0f;
+                _camera?.ResetViewFx();
+                ApplyOverlayColors();
                 if (_pauseGroup != null)
                 {
                     _pauseGroup.alpha = 0f;
                     _pauseGroup.blocksRaycasts = false;
                 }
 
-                _gameOver.gameObject.SetActive(true);
-                _gameOver.text = $"GAME OVER\nWAVE {_session.Wave}   KILLS {_session.Kills}\nSCORE {_session.Score}\nタップ / クリックで再開";
+                if (_gameOverRoot != null)
+                {
+                    _gameOverRoot.SetActive(true);
+                    _gameOverRoot.transform.SetAsLastSibling();
+                }
+
+                if (_gameOver != null)
+                {
+                    _gameOver.gameObject.SetActive(true);
+                    _gameOver.text = $"GAME OVER\nWAVE {_session.Wave}   KILLS {_session.Kills}\nSCORE {_session.Score}\nタップ / クリックで再開";
+                    _gameOver.color = Color.white;
+                }
             }
         }
 
@@ -480,8 +588,7 @@ namespace ShikiShiro
         {
             if (_session.State == SessionState.GameOver)
             {
-                Time.timeScale = 1f;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+                Bootstrap.RestartRun();
             }
         }
 
@@ -570,14 +677,33 @@ namespace ShikiShiro
             flashRt.offsetMax = Vector2.zero;
             _clearFlash.raycastTarget = false;
 
-            _gameOver = CreateText(safeGo.transform, "GameOver", Vector2.zero, new Vector2(1100, 420), 44, TextAnchor.MiddleCenter);
+            _blastFill = CreatePanel(safeGo.transform, "BlastFill", Color.clear).GetComponent<Image>();
+            var blastRt = _blastFill.rectTransform;
+            blastRt.anchorMin = Vector2.zero;
+            blastRt.anchorMax = Vector2.one;
+            blastRt.offsetMin = Vector2.zero;
+            blastRt.offsetMax = Vector2.zero;
+            _blastFill.raycastTarget = false;
+            _blastFill.gameObject.SetActive(false);
+
+            _gameOverRoot = CreatePanel(safeGo.transform, "GameOverRoot", new Color(0.04f, 0.04f, 0.07f, 0.55f));
+            var goRootRt = _gameOverRoot.GetComponent<RectTransform>();
+            goRootRt.anchorMin = Vector2.zero;
+            goRootRt.anchorMax = Vector2.one;
+            goRootRt.offsetMin = Vector2.zero;
+            goRootRt.offsetMax = Vector2.zero;
+            _gameOverRoot.GetComponent<Image>().raycastTarget = true;
+            var restart = _gameOverRoot.AddComponent<Button>();
+            restart.transition = Selectable.Transition.None;
+            restart.onClick.AddListener(TryRestart);
+            _gameOverRoot.SetActive(false);
+
+            _gameOver = CreateText(_gameOverRoot.transform, "GameOver", Vector2.zero, new Vector2(1100, 420), 44, TextAnchor.MiddleCenter);
             var goRt = _gameOver.rectTransform;
             goRt.anchorMin = new Vector2(0.5f, 0.5f);
             goRt.anchorMax = new Vector2(0.5f, 0.5f);
             goRt.pivot = new Vector2(0.5f, 0.5f);
-            _gameOver.gameObject.SetActive(false);
-            var restart = _gameOver.gameObject.AddComponent<Button>();
-            restart.onClick.AddListener(TryRestart);
+            _gameOver.raycastTarget = false;
 
             _hurt = CreatePanel(safeGo.transform, "Hurt", new Color(0.72f, 0.02f, 0.02f, 0f)).GetComponent<Image>();
             var hurtRt = _hurt.rectTransform;
@@ -698,7 +824,7 @@ namespace ShikiShiro
 
             pausePanel.transform.SetAsLastSibling();
             BuildCountdown(safeGo.transform);
-            _gameOver.transform.SetAsLastSibling();
+            _gameOverRoot.transform.SetAsLastSibling();
         }
 
         private void BuildCountdown(Transform parent)

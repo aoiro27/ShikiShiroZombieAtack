@@ -24,7 +24,13 @@ namespace ShikiShiro
         private ParticleSystem _explodeEmbers;
         private ParticleSystem _clearSparks;
         private ParticleSystem _clearGlow;
+        private ParticleSystem _bossFire;
+        private ParticleSystem _bossSmoke;
+        private ParticleSystem _bossFlash;
+        private ParticleSystem _bossShock;
+        private ParticleSystem _bossSparks;
         private Coroutine _hitstop;
+        private Coroutine _bossBoom;
         private Light _muzzleLight;
         private Light _hitLight;
         private float _muzzleLightUntil;
@@ -74,13 +80,13 @@ namespace ShikiShiro
             ConfigureBurst(_bloodSpray, cone: 28f, speed: 14f, size: 0.05f, life: 0.32f, gravity: 1.8f, new Color(0.7f, 0.0f, 0.0f, 1f));
             _bloodMist = BuildParticles(root, "BloodMist", alpha, 64, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_bloodMist, cone: 70f, speed: 2.2f, size: 0.35f, life: 0.7f, gravity: 0.4f, new Color(0.35f, 0.0f, 0.0f, 0.55f));
-            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 420, ParticleSystemRenderMode.Billboard);
+            _explodeFire = BuildParticles(root, "ExplodeFire", additive, 1800, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeFire, cone: 90f, speed: 14f, size: 0.55f, life: 0.42f, gravity: -0.8f, new Color(1f, 0.42f, 0.05f, 1f));
-            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 48, ParticleSystemRenderMode.Billboard);
+            _explodeFlash = BuildParticles(root, "ExplodeFlash", additive, 120, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeFlash, cone: 0f, speed: 0.15f, size: 2.4f, life: 0.1f, gravity: 0f, new Color(1f, 0.92f, 0.55f, 1f));
-            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 220, ParticleSystemRenderMode.Billboard);
+            _explodeSmoke = BuildParticles(root, "ExplodeSmoke", alpha, 900, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_explodeSmoke, cone: 75f, speed: 3.6f, size: 1.15f, life: 1.15f, gravity: -0.45f, new Color(0.16f, 0.1f, 0.08f, 0.72f));
-            _explodeShock = BuildParticles(root, "ExplodeShock", additive, 8, ParticleSystemRenderMode.Billboard);
+            _explodeShock = BuildParticles(root, "ExplodeShock", additive, 48, ParticleSystemRenderMode.Billboard);
             ConfigureShock(_explodeShock, new Color(1f, 0.7f, 0.25f, 0.85f));
             _explodeGibs = BuildParticles(root, "ExplodeGibs", alpha, 180, ParticleSystemRenderMode.Stretch);
             var gibR = _explodeGibs.GetComponent<ParticleSystemRenderer>();
@@ -99,6 +105,19 @@ namespace ShikiShiro
             ConfigureBurst(_clearSparks, cone: 18f, speed: 9f, size: 0.06f, life: 0.7f, gravity: -0.6f, new Color(1f, 0.86f, 0.35f, 1f));
             _clearGlow = BuildParticles(root, "ClearGlow", additive, 24, ParticleSystemRenderMode.Billboard);
             ConfigureBurst(_clearGlow, cone: 0f, speed: 0.2f, size: 2.8f, life: 0.22f, gravity: 0f, new Color(1f, 0.92f, 0.55f, 1f));
+            _bossFire = BuildParticles(root, "BossFire", additive, 80, ParticleSystemRenderMode.Billboard);
+            ConfigureBossCloud(_bossFire, 7.5f, 1.15f, 2.4f, -0.35f, new Color(1f, 0.42f, 0.08f, 1f));
+            _bossSmoke = BuildParticles(root, "BossSmoke", alpha, 70, ParticleSystemRenderMode.Billboard);
+            ConfigureBossCloud(_bossSmoke, 9.5f, 1.8f, 1.6f, -0.55f, new Color(0.22f, 0.14f, 0.1f, 0.85f));
+            _bossFlash = BuildParticles(root, "BossFlash", additive, 12, ParticleSystemRenderMode.Billboard);
+            ConfigureBossCloud(_bossFlash, 22f, 0.28f, 0.2f, 0f, new Color(1f, 0.95f, 0.7f, 1f));
+            _bossShock = BuildParticles(root, "BossShock", additive, 6, ParticleSystemRenderMode.Billboard);
+            ConfigureBossShock(_bossShock);
+            _bossSparks = BuildParticles(root, "BossSparks", additive, 160, ParticleSystemRenderMode.Stretch);
+            var bossSparkR = _bossSparks.GetComponent<ParticleSystemRenderer>();
+            bossSparkR.lengthScale = 4.2f;
+            bossSparkR.velocityScale = 0.22f;
+            ConfigureBossCloud(_bossSparks, 0.35f, 0.7f, 18f, 1.4f, new Color(1f, 0.72f, 0.2f, 1f));
 
             var hitLightGo = new GameObject("HitLight");
             hitLightGo.transform.SetParent(root, false);
@@ -189,14 +208,105 @@ namespace ShikiShiro
                 return;
             }
 
-            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(4f * s));
+            BurstExplosion(point, rot, s);
+        }
+
+        public void BossExplosion(Vector3 point)
+        {
+            if (_bossBoom != null)
+            {
+                StopCoroutine(_bossBoom);
+            }
+
+            _bossBoom = StartCoroutine(RunBossExplosion(point));
+        }
+
+        private IEnumerator RunBossExplosion(Vector3 point)
+        {
+            HudController hud = FindAnyObjectByType<HudController>();
+            hud?.BlastFullScreen();
+            Camera cam = Camera.main;
+            TpsCamera tps = cam != null ? cam.GetComponent<TpsCamera>() : null;
+            tps?.Shake(1.4f, 1.15f);
+            if (_hitLight != null)
+            {
+                _hitLight.range = 90f;
+            }
+
+            CoverCamera(cam, 1f);
+            BlastBoss(point, 1.35f);
+            yield return new WaitForSecondsRealtime(0.12f);
+            hud?.BlastFullScreen();
+            CoverCamera(cam, 0.9f);
+            BlastBoss(point + Vector3.up * 2.4f, 1.2f);
+            tps?.Shake(1.1f, 0.7f);
+            yield return new WaitForSecondsRealtime(0.16f);
+            CoverCamera(cam, 1.15f);
+            BlastBoss(point + Vector3.up * 5f, 1.5f);
+            tps?.Shake(0.7f, 0.55f);
+            if (_hitLight != null)
+            {
+                _hitLight.range = 14f;
+            }
+
+            _bossBoom = null;
+        }
+
+        private void CoverCamera(Camera cam, float scale)
+        {
+            if (cam == null)
+            {
+                return;
+            }
+
+            Vector3 cover = cam.transform.position + cam.transform.forward * 2.4f;
+            Quaternion face = Quaternion.LookRotation(cam.transform.forward);
+            EmitHuge(_explodeFlash, cover, 95f * scale, 10);
+            EmitHuge(_explodeShock, cover, 110f * scale, 4);
+            EmitHuge(_explodeFire, cover, 28f * scale, 36);
+            EmitHuge(_explodeSmoke, cover, 36f * scale, 22);
+            Emit(_explodeEmbers, cover, face, Mathf.RoundToInt(80f * scale));
+            PulseHitLight(cover, new Color(1f, 0.72f, 0.25f), 80f * scale, 0.5f);
+        }
+
+        private void BlastBoss(Vector3 point, float scale)
+        {
+            Quaternion up = Quaternion.LookRotation(Vector3.up);
+            BurstExplosion(point, up, 9f * scale);
+            EmitHuge(_explodeShock, point, 70f * scale, 4);
+            EmitHuge(_explodeFlash, point, 48f * scale, Mathf.RoundToInt(10f * scale));
+            Emit(_explodeFire, point, up, Mathf.RoundToInt(140f * scale));
+            Emit(_explodeSmoke, point, up, Mathf.RoundToInt(80f * scale));
+            Emit(_explodeEmbers, point, up, Mathf.RoundToInt(90f * scale));
+            Emit(_explodeGibs, point, up, Mathf.RoundToInt(50f * scale));
+            Emit(_sparks, point, up, Mathf.RoundToInt(70f * scale));
+            PulseHitLight(point, new Color(1f, 0.55f, 0.12f), 80f * scale, 0.55f);
+        }
+
+        private void BurstExplosion(Vector3 point, Quaternion rot, float s)
+        {
+            Emit(_explodeFlash, point, rot, Mathf.RoundToInt(6f * s));
             Emit(_explodeShock, point, Quaternion.identity, 1);
-            Emit(_explodeFire, point, rot, Mathf.RoundToInt(28f * s));
-            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(14f * s));
-            Emit(_explodeEmbers, point, rot, Mathf.RoundToInt(18f * s));
-            Emit(_explodeGibs, point, rot, Mathf.RoundToInt(12f * s));
-            Emit(_sparks, point, rot, Mathf.RoundToInt(16f * s));
-            PulseHitLight(point, new Color(1f, 0.48f, 0.1f), 12f * s, 0.16f);
+            Emit(_explodeFire, point, rot, Mathf.RoundToInt(32f * s));
+            Emit(_explodeSmoke, point, rot, Mathf.RoundToInt(18f * s));
+            Emit(_explodeEmbers, point, rot, Mathf.RoundToInt(22f * s));
+            Emit(_explodeGibs, point, rot, Mathf.RoundToInt(16f * s));
+            Emit(_sparks, point, rot, Mathf.RoundToInt(20f * s));
+            PulseHitLight(point, new Color(1f, 0.48f, 0.1f), 12f * s, 0.2f);
+        }
+
+        public void CancelHitstop()
+        {
+            if (_hitstop != null)
+            {
+                StopCoroutine(_hitstop);
+                _hitstop = null;
+            }
+
+            if (Time.timeScale > 0.001f && Time.timeScale < 0.99f)
+            {
+                Time.timeScale = 1f;
+            }
         }
 
         public void KillPunch(float scale)
@@ -325,6 +435,23 @@ namespace ShikiShiro
             ps.Emit(count);
         }
 
+        private static void EmitHuge(ParticleSystem ps, Vector3 pos, float size, int count)
+        {
+            if (ps == null)
+            {
+                return;
+            }
+
+            ps.transform.SetPositionAndRotation(pos, Quaternion.identity);
+            var emit = new ParticleSystem.EmitParams
+            {
+                position = pos,
+                applyShapeToPosition = true,
+                startSize = size
+            };
+            ps.Emit(emit, count);
+        }
+
         private void PulseHitLight(Vector3 point, Color color, float intensity, float life)
         {
             _hitLight.transform.position = point;
@@ -351,6 +478,7 @@ namespace ShikiShiro
             main.maxParticles = max;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.useUnscaledTime = true;
             var emission = ps.emission;
             emission.enabled = false;
             return ps;
@@ -408,6 +536,55 @@ namespace ShikiShiro
             var sizeMod = ps.sizeOverLifetime;
             sizeMod.enabled = true;
             sizeMod.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.2f, 1f, 6.5f));
+        }
+
+        private static void ConfigureBossCloud(ParticleSystem ps, float size, float life, float speed, float gravity, Color color)
+        {
+            var main = ps.main;
+            main.startLifetime = life;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(speed * 0.35f, speed);
+            main.startSize = new ParticleSystem.MinMaxCurve(size * 0.65f, size);
+            main.startColor = color;
+            main.gravityModifier = gravity;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 1.8f;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(color, 0.55f), new GradientColorKey(new Color(0.2f, 0.08f, 0.02f), 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(color.a, 0.35f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sizeMod = ps.sizeOverLifetime;
+            sizeMod.enabled = true;
+            sizeMod.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.55f, 1f, 1.35f));
+        }
+
+        private static void ConfigureBossShock(ParticleSystem ps)
+        {
+            var main = ps.main;
+            main.startLifetime = 0.55f;
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(6f, 9f);
+            main.startColor = new Color(1f, 0.78f, 0.28f, 0.95f);
+            main.gravityModifier = 0f;
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.2f;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(1f, 0.45f, 0.08f), 1f) },
+                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sizeMod = ps.sizeOverLifetime;
+            sizeMod.enabled = true;
+            sizeMod.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.15f, 1f, 8f));
         }
 
         private IEnumerator Hitstop(float duration, float scale)

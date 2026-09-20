@@ -6,7 +6,7 @@ namespace ShikiShiro
     public sealed class MinimapHud : MonoBehaviour
     {
         private const int MaxBlips = 48;
-        private const float Size = 268f;
+        private const float Size = 348f;
         private const float ViewRange = 48f;
 
         private RectTransform _overlay;
@@ -142,10 +142,10 @@ namespace ShikiShiro
             go.transform.SetParent(parent, false);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(22f, 22f);
-            MakeBlip(rt, "Glow", UiSprites.Blip, new Color(1f, 0.22f, 0.05f, 0.7f), 22f);
-            MakeBlip(rt, "Body", UiSprites.Blip, new Color(1f, 0.12f, 0.04f, 1f), 16f);
-            MakeBlip(rt, "Core", UiSprites.Blip, new Color(1f, 0.95f, 0.35f, 1f), 8f);
+            rt.sizeDelta = new Vector2(36f, 36f);
+            MakeBlip(rt, "Glow", UiSprites.Blip, new Color(1f, 0.08f, 0.04f, 0.92f), 36f);
+            MakeBlip(rt, "Body", UiSprites.Blip, new Color(1f, 0.02f, 0.02f, 1f), 26f);
+            MakeBlip(rt, "Core", UiSprites.Blip, new Color(1f, 0.28f, 0.22f, 1f), 12f);
             return rt;
         }
 

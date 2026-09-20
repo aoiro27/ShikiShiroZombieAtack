@@ -62,6 +62,18 @@ namespace ShikiShiro
             target.HideBody();
         }
 
+        public void ResetViewFx()
+        {
+            _shakeTime = 0f;
+            _kickTime = 0f;
+            _kickFov = 0f;
+            if (UnityCamera != null)
+            {
+                UnityCamera.fieldOfView = BaseFov;
+                UnityCamera.enabled = true;
+            }
+        }
+
         public void Shake(float amount, float duration)
         {
             _shakeDuration = Mathf.Max(0.04f, duration);

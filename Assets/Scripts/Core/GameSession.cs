@@ -154,6 +154,7 @@ namespace ShikiShiro
 
             SetState(SessionState.GameOver);
             Time.timeScale = 0f;
+            FindAnyObjectByType<CombatFx>()?.CancelHitstop();
             PlayerDied?.Invoke();
         }
 

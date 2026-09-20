@@ -393,35 +393,51 @@ namespace ShikiShiro
             Vector3 pos = transform.position;
             Vector3 boom = pos + Vector3.up * (Kind == ZombieKind.Boss ? Mathf.Max(1.6f, _controller.height * 0.45f) : 0.9f);
             Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
-            float scale = Kind == ZombieKind.Boss ? 4.8f : Kind == ZombieKind.Brute ? 1.9f : 1.15f;
-            scale *= info.ChainDepth > 0 ? 1.25f : 1f;
-            _fx.Explosion(boom, dir, scale);
-            if (info.ChainDepth == 0)
+                if (Kind == ZombieKind.Boss)
+                {
+                    _fx.BossExplosion(boom);
+                    _sfx.PlayBossBomb();
+                    _fx.KillPunch(4.5f);
+                }
+            else
             {
-                _sfx.PlayKill(info.IsHeadshot);
-                _sfx.PlayBoom();
-                _fx.KillPunch(scale);
+                float scale = Kind == ZombieKind.Brute ? 1.9f : 1.15f;
+                scale *= info.ChainDepth > 0 ? 1.25f : 1f;
+                _fx.Explosion(boom, dir, scale);
+                if (info.ChainDepth == 0)
+                {
+                    _sfx.PlayKill(info.IsHeadshot);
+                    _sfx.PlayBoom();
+                    _fx.KillPunch(scale);
+                }
             }
 
             int gained = _session.RegisterCombatHit(dealt, info.IsHeadshot, true);
             _session.NotifyHitPopup(new HitPopupInfo(info.Point, gained, _session.Combo, info.IsHeadshot, true));
-            _horde.NotifyKilled(this);
+            _horde?.NotifyKilled(this);
             if (Kind != ZombieKind.Boss)
             {
-                _horde.ChainBurst(this, info);
+                _horde?.ChainBurst(this, info);
             }
             if (info.ChainDepth == 0 && (Kind == ZombieKind.Boss || Random.value < 0.1f))
             {
-                _horde.DropPickup(pos);
+                _horde?.DropPickup(pos);
             }
 
             _visual.gameObject.SetActive(false);
+            SilenceBossAnim();
+            if (Kind == ZombieKind.Boss)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             _horde?.Despawn(this);
         }
 
         public void ForceDespawn()
         {
-            if (!IsAlive && !gameObject.activeSelf)
+            if (!IsAlive)
             {
                 return;
             }
@@ -433,13 +449,28 @@ namespace ShikiShiro
             }
 
             CancelInvoke(nameof(RestoreColor));
+            SilenceBossAnim();
             if (_visual != null)
             {
                 _visual.gameObject.SetActive(false);
             }
 
+            if (Kind == ZombieKind.Boss)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             gameObject.SetActive(false);
             _horde?.Despawn(this);
+        }
+
+        private void SilenceBossAnim()
+        {
+            if (_bossAnim != null)
+            {
+                _bossAnim.enabled = false;
+            }
         }
 
         private void ApplyKind(ZombieKind kind)
@@ -501,7 +532,9 @@ namespace ShikiShiro
             }
             else if (_bossVisual != null)
             {
-                _bossVisual.SetActive(false);
+                Destroy(_bossVisual);
+                _bossVisual = null;
+                _bossAnim = null;
             }
             if (_walkerVisual != null)
             {
@@ -528,6 +561,7 @@ namespace ShikiShiro
                     _bossAnim = _bossVisual.GetComponentInChildren<Animator>(true);
                     if (_bossAnim != null)
                     {
+                        _bossAnim.enabled = true;
                         _bossAnim.applyRootMotion = false;
                         _bossAnim.SetInteger("battle", 1);
                         _bossAnim.SetInteger("moving", 1);

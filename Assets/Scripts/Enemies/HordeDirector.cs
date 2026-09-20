@@ -18,8 +18,34 @@ namespace ShikiShiro
         private int _alive;
         private readonly List<ZombieAgent> _waveTrash = new List<ZombieAgent>(96);
         private readonly List<ZombieAgent> _waveBosses = new List<ZombieAgent>(8);
-        private int _spawnedBossWave;
+        private static HordeDirector RunOwner;
+        private static int BossWaveIssued;
+        private WaveBeat _beat;
+        private int _beatWave;
+        private Phase _phase;
+        private int _wave;
+        private int _countNum;
+        private float _timer;
+        private bool _trashSpawned;
         private HudController _hud;
+
+        private enum WaveBeat
+        {
+            None,
+            Trash,
+            Boss,
+            Clear
+        }
+
+        private enum Phase
+        {
+            Idle,
+            Countdown,
+            Trash,
+            PauseBeforeBoss,
+            Boss,
+            Clear
+        }
 
         public IReadOnlyList<ZombieAgent> AllZombies => _zombies != null ? _zombies.All : System.Array.Empty<ZombieAgent>();
 
@@ -44,13 +70,79 @@ namespace ShikiShiro
             _balloons = BalloonField.Spawn(transform, arena, this, fx, sfx, session);
         }
 
+        public static void ResetStaticRun()
+        {
+            RunOwner = null;
+            BossWaveIssued = 0;
+        }
+
         public void StartWaves()
         {
-            StopAllCoroutines();
-            _spawnedBossWave = 0;
-            _waveTrash.Clear();
-            _waveBosses.Clear();
-            StartCoroutine(RunWaves());
+            if (RunOwner != null && RunOwner != this)
+            {
+                enabled = false;
+                return;
+            }
+
+            if (RunOwner == this && _phase != Phase.Idle)
+            {
+                return;
+            }
+
+            RunOwner = this;
+            enabled = true;
+            EnterCountdown();
+        }
+
+        private void Update()
+        {
+            if (_session == null || _phase == Phase.Idle || _session.State == SessionState.GameOver)
+            {
+                return;
+            }
+
+            switch (_phase)
+            {
+                case Phase.Countdown:
+                    TickCountdown();
+                    break;
+                case Phase.Trash:
+                    if (_trashSpawned && CountAlive(false) <= 0)
+                    {
+                        _phase = Phase.PauseBeforeBoss;
+                        _timer = 0.9f;
+                    }
+                    break;
+                case Phase.PauseBeforeBoss:
+                    _timer -= Time.deltaTime;
+                    if (_timer <= 0f)
+                    {
+                        _beat = WaveBeat.Boss;
+                        _phase = Phase.Boss;
+                        TrySpawnBossRound(_wave);
+                    }
+                    break;
+                case Phase.Boss:
+                    if (CountSceneBosses() <= 0 && !AnyAlive(_waveBosses))
+                    {
+                        EnterClear();
+                    }
+                    break;
+                case Phase.Clear:
+                    _timer -= Time.deltaTime;
+                    if (_timer <= 0f)
+                    {
+                        _hud.HideCountdown();
+                        _session.AdvanceWave();
+                        EnterCountdown();
+                    }
+                    break;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            CullIllegalBosses();
         }
 
         public void NotifyKilled(ZombieAgent agent)
@@ -180,88 +272,108 @@ namespace ShikiShiro
             }
         }
 
-        private IEnumerator RunWaves()
+        private void EnterCountdown()
         {
-            yield return null;
-            Physics.SyncTransforms();
+            _wave = _session.Wave;
+            _beatWave = _wave;
+            _beat = WaveBeat.None;
+            _phase = Phase.Countdown;
+            _countNum = 3;
+            _timer = 1f;
+            _trashSpawned = false;
+            PrepareWave();
+            _session.BeginCountdown();
+            _hud.ShowCountdown(_countNum, _wave);
+            _sfx.PlayCountdownTick(_countNum);
+        }
 
-            while (_session.State != SessionState.GameOver)
+        private void TickCountdown()
+        {
+            _timer -= Time.deltaTime;
+            if (_timer > 0f)
             {
-                int wave = _session.Wave;
-                _waveTrash.Clear();
-                _waveBosses.Clear();
-                ResetPlayerToStart();
-                Physics.SyncTransforms();
-                ClearLiving();
-                if (_balloons != null)
-                {
-                    _balloons.Respawn();
-                }
-
-                yield return WaveCountdown(wave);
-                if (_session.State == SessionState.GameOver)
-                {
-                    yield break;
-                }
-
-                _session.BeginCombat();
-                SpawnWave(WaveSize(wave), wave);
-                _sfx.PlayRoar();
-                _sfx.PlayWaveStart();
-
-                while (AnyAlive(_waveTrash) && _session.State != SessionState.GameOver)
-                {
-                    yield return null;
-                }
-
-                if (_session.State == SessionState.GameOver)
-                {
-                    yield break;
-                }
-
-                yield return new WaitForSeconds(0.9f);
-                if (_session.State == SessionState.GameOver)
-                {
-                    yield break;
-                }
-
-                if (_waveBosses.Count == 0)
-                {
-                    int bosses = BossCount(wave);
-                    for (int i = 0; i < bosses; i++)
-                    {
-                        SpawnBoss(i, bosses);
-                    }
-
-                    _hud.ShowBossAppear(wave, bosses);
-                    _sfx.PlayBossWarning();
-                }
-
-                while (AnyAlive(_waveBosses) && _session.State != SessionState.GameOver)
-                {
-                    yield return null;
-                }
-
-                if (_session.State == SessionState.GameOver)
-                {
-                    yield break;
-                }
-
-                _session.NotifyWaveClear();
-                _hud.ShowWaveClear(wave);
-                _sfx.PlayWaveClear();
-                if (_player != null)
-                {
-                    _fx.WaveClearBurst(_player.position);
-                }
-                yield return new WaitForSeconds(3.6f);
-                if (_session.State == SessionState.GameOver)
-                {
-                    yield break;
-                }
-
-                _session.AdvanceWave();
+                return;
             }
+
+            _countNum--;
+            if (_countNum >= 1)
+            {
+                _timer = 1f;
+                _hud.ShowCountdown(_countNum, _wave);
+                _sfx.PlayCountdownTick(_countNum);
+                return;
+            }
+
+            _hud.HideCountdown();
+            _session.BeginCombat();
+            _beat = WaveBeat.Trash;
+            _phase = Phase.Trash;
+            SpawnWave(WaveCombatRules.TrashCount(_wave, PoolCap()), _wave);
+            if (CountAlive(false) == 0)
+            {
+                SpawnWave(WaveCombatRules.TrashCount(_wave, PoolCap()), _wave);
+            }
+
+            _trashSpawned = CountAlive(false) > 0;
+            _sfx.PlayRoar();
+            _sfx.PlayWaveStart();
+        }
+
+        private void EnterClear()
+        {
+            _beat = WaveBeat.Clear;
+            _phase = Phase.Clear;
+            _timer = 3.6f;
+            CullIllegalBosses();
+            _session.NotifyWaveClear();
+            _hud.ShowWaveClear(_wave);
+            _sfx.PlayWaveClear();
+            if (_player != null)
+            {
+                _fx.WaveClearBurst(_player.position);
+            }
+        }
+
+        private void PrepareWave()
+        {
+            _waveTrash.Clear();
+            _waveBosses.Clear();
+            ResetPlayerToStart();
+            Physics.SyncTransforms();
+            ClearLiving();
+            if (_balloons != null)
+            {
+                _balloons.Respawn();
+            }
+        }
+
+        private void TrySpawnBossRound(int wave)
+        {
+            if (_phase != Phase.Boss || !_trashSpawned || CountAlive(false) > 0)
+            {
+                return;
+            }
+
+            if (wave <= BossWaveIssued)
+            {
+                return;
+            }
+
+            BossWaveIssued = wave;
+            int livingBosses = CountSceneBosses();
+            int bosses = WaveCombatRules.BossCount(wave);
+            int need = bosses - livingBosses;
+            if (need <= 0)
+            {
+                return;
+            }
+            for (int i = 0; i < need; i++)
+            {
+                SpawnBoss(livingBosses + i, bosses);
+            }
+
+            _hud.ShowBossAppear(wave, bosses);
+            _sfx.PlayBossWarning();
         }
 
         private static bool AnyAlive(List<ZombieAgent> list)
@@ -278,22 +390,82 @@ namespace ShikiShiro
             return false;
         }
 
-        private IEnumerator WaveCountdown(int wave)
+        private int CountAlive(bool bosses)
         {
-            for (int n = 3; n >= 1; n--)
+            int count = 0;
+            var all = AllZombies;
+            for (int i = 0; i < all.Count; i++)
             {
-                if (_session.State == SessionState.GameOver)
+                ZombieAgent z = all[i];
+                if (z == null || !z.IsAlive)
                 {
-                    _hud.HideCountdown();
-                    yield break;
+                    continue;
                 }
 
-                _hud.ShowCountdown(n, wave);
-                _sfx.PlayCountdownTick(n);
-                yield return new WaitForSeconds(1f);
+                if ((z.Kind == ZombieKind.Boss) == bosses)
+                {
+                    count++;
+                }
             }
 
-            _hud.HideCountdown();
+            return count;
+        }
+
+        private static int CountSceneBosses()
+        {
+            int count = 0;
+            ZombieAgent[] all = FindObjectsByType<ZombieAgent>(FindObjectsInactive.Exclude);
+            for (int i = 0; i < all.Length; i++)
+            {
+                ZombieAgent z = all[i];
+                if (z != null && z.IsAlive && z.Kind == ZombieKind.Boss)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private void CullIllegalBosses()
+        {
+            int allowed = 0;
+            if (_beat == WaveBeat.Boss)
+            {
+                allowed = WaveCombatRules.BossCount(Mathf.Max(1, _beatWave));
+            }
+
+            int kept = 0;
+            ZombieAgent[] all = FindObjectsByType<ZombieAgent>(FindObjectsInactive.Exclude);
+            for (int i = 0; i < all.Length; i++)
+            {
+                ZombieAgent z = all[i];
+                if (z == null || !z.IsAlive || z.Kind != ZombieKind.Boss)
+                {
+                    continue;
+                }
+
+                if (_beat != WaveBeat.Boss || !IsTrackedBoss(z) || kept >= allowed)
+                {
+                    z.ForceDespawn();
+                    continue;
+                }
+
+                kept++;
+            }
+        }
+
+        private bool IsTrackedBoss(ZombieAgent agent)
+        {
+            for (int i = 0; i < _waveBosses.Count; i++)
+            {
+                if (_waveBosses[i] == agent)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ResetPlayerToStart()
@@ -314,23 +486,24 @@ namespace ShikiShiro
             }
         }
 
-        private int WaveSize(int wave)
+        private int PoolCap()
         {
-            int size = 16 + wave * 8;
-            int cap = _config != null ? _config.ZombiePoolSize : 96;
-            return Mathf.Min(size, cap);
+            return _config != null ? _config.ZombiePoolSize : 96;
         }
 
         private void SpawnWave(int count, int wave)
         {
             Vector3 spawn = _arena.SpawnPoint;
-            float minR = 20f;
-            float maxR = Mathf.Min(_arena.PlayHalf * 0.82f, 40f);
+            float farMax = Mathf.Min(_arena.PlayHalf * 0.82f, 40f);
             for (int i = 0; i < count; i++)
             {
+                bool close = i < 10;
+                float minR = close ? 8f : 20f;
+                float maxR = close ? 14f : farMax;
+                float keepAway = close ? 6f : 18f;
                 float angle = (i / (float)count) * 360f + Random.Range(-12f, 12f);
                 Vector3 ring = spawn + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * Random.Range(minR, maxR);
-                Vector3 pos = PlaceAround(ring, 0.4f, 2.8f, spawn, 18f);
+                Vector3 pos = PlaceAround(ring, 0.4f, 2.8f, spawn, keepAway);
                 ZombieAgent zombie = TakeZombie();
                 zombie.Spawn(SelectKind(wave), pos, _player, _session, _fx, _sfx, this);
                 _waveTrash.Add(zombie);
@@ -338,15 +511,11 @@ namespace ShikiShiro
             }
         }
 
-        private static int BossCount(int wave)
-        {
-            return wave >= 3 ? 3 : 1;
-        }
-
         private void SpawnBoss(int index, int total)
         {
             Vector3 pos = PlaceBossAtCenter(index, total);
-            ZombieAgent boss = TakeZombie();
+            ZombieAgent boss = CreateZombie();
+            boss.name = "Boss";
             boss.Spawn(ZombieKind.Boss, pos, _player, _session, _fx, _sfx, this);
             _waveBosses.Add(boss);
             _alive++;
@@ -363,6 +532,7 @@ namespace ShikiShiro
             if (zombie.IsAlive)
             {
                 zombie.ForceDespawn();
+                zombie = _zombies.Get();
             }
 
             return zombie;

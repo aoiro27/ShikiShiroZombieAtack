@@ -33,6 +33,7 @@ namespace ShikiShiro
         private AudioClip _balloonBurst;
         private AudioClip _bossWarning;
         private AudioClip _gameOver;
+        private AudioClip _bomb;
         private float _nextGroanAt;
         private Coroutine _clearSting;
 
@@ -74,6 +75,7 @@ namespace ShikiShiro
 
             _bossWarning = LoadNamedClip("warning", "Assets/warning.mp3");
             _gameOver = LoadNamedClip("gameover", "Assets/gameover.mp3");
+            _bomb = LoadNamedClip("bomb", "Assets/bomb.mp3");
         }
 
         public void PlayBalloonBurst()
@@ -317,6 +319,33 @@ namespace ShikiShiro
 
             _sting.clip = _bossWarning;
             _sting.Play();
+        }
+
+        public void PlayBossBomb()
+        {
+            if (_bomb == null)
+            {
+                _bomb = LoadNamedClip("bomb", "Assets/bomb.mp3");
+            }
+
+            if (_sting == null || _bomb == null)
+            {
+                PlayBoom();
+                PlayExplosion();
+                return;
+            }
+
+            _sting.Stop();
+            _sting.pitch = 1f;
+            _sting.volume = 1f;
+            if (!_bomb.preloadAudioData)
+            {
+                _bomb.LoadAudioData();
+            }
+
+            _sting.clip = _bomb;
+            _sting.Play();
+            PlayBoom();
         }
 
         public void PlayGameOver()
