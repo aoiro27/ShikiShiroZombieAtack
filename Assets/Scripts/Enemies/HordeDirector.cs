@@ -27,6 +27,7 @@ namespace ShikiShiro
         private int _countNum;
         private float _timer;
         private bool _trashSpawned;
+        private bool _spawnedBossThisRound;
         private HudController _hud;
 
         private enum WaveBeat
@@ -123,7 +124,7 @@ namespace ShikiShiro
                     }
                     break;
                 case Phase.Boss:
-                    if (CountSceneBosses() <= 0 && !AnyAlive(_waveBosses))
+                    if (_spawnedBossThisRound && CountSceneBosses() <= 0 && !AnyAlive(_waveBosses))
                     {
                         EnterClear();
                     }
@@ -142,7 +143,20 @@ namespace ShikiShiro
 
         private void LateUpdate()
         {
+            if (RunOwner != this)
+            {
+                return;
+            }
+
             CullIllegalBosses();
+        }
+
+        private void OnEnable()
+        {
+            if (RunOwner != null && RunOwner != this)
+            {
+                enabled = false;
+            }
         }
 
         public void NotifyKilled(ZombieAgent agent)
@@ -152,13 +166,13 @@ namespace ShikiShiro
 
         public void Rescue(ZombieAgent agent)
         {
-            if (agent == null || !agent.IsAlive)
+            if (agent == null || !agent.IsAlive || agent.Kind == ZombieKind.Boss)
             {
                 return;
             }
 
             Vector3 origin = _player != null ? _player.position : _arena.SpawnPoint;
-            float body = agent.Kind == ZombieKind.Boss ? 1.9f : 0.4f;
+            float body = 0.4f;
             Vector3 pos = PlaceAround(_arena.SpawnPoint + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(20f, 34f), 0.5f, 2.2f, origin, 16f, body);
             agent.Warp(pos);
         }
@@ -281,6 +295,7 @@ namespace ShikiShiro
             _countNum = 3;
             _timer = 1f;
             _trashSpawned = false;
+            _spawnedBossThisRound = false;
             PrepareWave();
             _session.BeginCountdown();
             _hud.ShowCountdown(_countNum, _wave);
@@ -362,18 +377,17 @@ namespace ShikiShiro
             BossWaveIssued = wave;
             int livingBosses = CountSceneBosses();
             int bosses = WaveCombatRules.BossCount(wave);
-            int need = bosses - livingBosses;
-            if (need <= 0)
+            for (int i = livingBosses; i < bosses; i++)
             {
-                return;
-            }
-            for (int i = 0; i < need; i++)
-            {
-                SpawnBoss(livingBosses + i, bosses);
+                SpawnBoss(i, bosses);
             }
 
-            _hud.ShowBossAppear(wave, bosses);
-            _sfx.PlayBossWarning();
+            _spawnedBossThisRound = true;
+            if (livingBosses < bosses)
+            {
+                _hud.ShowBossAppear(wave, bosses);
+                _sfx.PlayBossWarning();
+            }
         }
 
         private static bool AnyAlive(List<ZombieAgent> list)

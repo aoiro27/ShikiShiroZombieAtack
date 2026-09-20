@@ -210,7 +210,7 @@ namespace ShikiShiro
             float vertical = Mathf.Abs(to.y);
             to.y = 0f;
             float dist = to.magnitude;
-            if (vertical > 1.8f)
+            if (vertical > 1.8f && Kind != ZombieKind.Boss)
             {
                 TryRescue();
             }
@@ -237,7 +237,7 @@ namespace ShikiShiro
             }
 
             SampleStuck(chasing, dist);
-            if (_horde != null && !_horde.IsInside(transform.position))
+            if (Kind != ZombieKind.Boss && _horde != null && !_horde.IsInside(transform.position))
             {
                 TryRescue();
             }
@@ -316,7 +316,7 @@ namespace ShikiShiro
                     _slideSign = -_slideSign;
                 }
 
-                if (_stuckTimer > 3.8f)
+                if (_stuckTimer > 3.8f && Kind != ZombieKind.Boss)
                 {
                     TryRescue();
                     if (_stuckTimer <= 0f)
@@ -523,12 +523,30 @@ namespace ShikiShiro
 
         private void ReplaceVisual(string modelPath)
         {
-            EnsureCached(ref _walkerVisual, GameAssets.ZombieWalker);
-            EnsureCached(ref _runnerVisual, GameAssets.ZombieRunner);
-            EnsureCached(ref _bruteVisual, GameAssets.ZombieBrute);
+            if (Kind != ZombieKind.Boss)
+            {
+                EnsureCached(ref _walkerVisual, GameAssets.ZombieWalker);
+                EnsureCached(ref _runnerVisual, GameAssets.ZombieRunner);
+                EnsureCached(ref _bruteVisual, GameAssets.ZombieBrute);
+            }
+
             if (Kind == ZombieKind.Boss)
             {
                 EnsureBossVisual();
+                if (_walkerVisual != null)
+                {
+                    _walkerVisual.SetActive(false);
+                }
+
+                if (_runnerVisual != null)
+                {
+                    _runnerVisual.SetActive(false);
+                }
+
+                if (_bruteVisual != null)
+                {
+                    _bruteVisual.SetActive(false);
+                }
             }
             else if (_bossVisual != null)
             {
@@ -536,19 +554,23 @@ namespace ShikiShiro
                 _bossVisual = null;
                 _bossAnim = null;
             }
-            if (_walkerVisual != null)
-            {
-                _walkerVisual.SetActive(modelPath == GameAssets.ZombieWalker);
-            }
 
-            if (_runnerVisual != null)
+            if (Kind != ZombieKind.Boss)
             {
-                _runnerVisual.SetActive(modelPath == GameAssets.ZombieRunner);
-            }
+                if (_walkerVisual != null)
+                {
+                    _walkerVisual.SetActive(modelPath == GameAssets.ZombieWalker);
+                }
 
-            if (_bruteVisual != null)
-            {
-                _bruteVisual.SetActive(modelPath == GameAssets.ZombieBrute);
+                if (_runnerVisual != null)
+                {
+                    _runnerVisual.SetActive(modelPath == GameAssets.ZombieRunner);
+                }
+
+                if (_bruteVisual != null)
+                {
+                    _bruteVisual.SetActive(modelPath == GameAssets.ZombieBrute);
+                }
             }
 
             if (_bossVisual != null)

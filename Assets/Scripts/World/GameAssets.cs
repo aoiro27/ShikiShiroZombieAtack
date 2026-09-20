@@ -504,20 +504,15 @@ namespace ShikiShiro
 
         private static void StripVendorControls(GameObject go)
         {
-            MonoBehaviour[] behaviours = go.GetComponentsInChildren<MonoBehaviour>(true);
-            for (int i = 0; i < behaviours.Length; i++)
+            foreach (MonoBehaviour behaviour in go.GetComponentsInChildren<MonoBehaviour>(true))
             {
-                if (behaviours[i] == null)
+                if (behaviour == null || behaviour is Animator)
                 {
                     continue;
                 }
 
-                string typeName = behaviours[i].GetType().Name;
-                if (typeName == "THC6_ctrl")
-                {
-                    behaviours[i].enabled = false;
-                    Object.Destroy(behaviours[i]);
-                }
+                behaviour.enabled = false;
+                Object.Destroy(behaviour);
             }
 
             foreach (CharacterController controller in go.GetComponentsInChildren<CharacterController>(true))
