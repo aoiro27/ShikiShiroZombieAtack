@@ -13,9 +13,13 @@ namespace ShikiShiro
         public const string ZombieWalker = "Characters/ShirtlessZombie_FREE";
         public const string ZombieRunner = "Characters/ZombieMale_AAB";
         public const string ZombieBrute = "Characters/FreeZombie";
+        public const string BossCreature = "Characters/FantasticCreature";
+        public const string BossCreatureAsset = "Assets/True_Horror_Creatures/Horror_creature6_v1.0/Prefabs/thc6.prefab";
 
-        public const string InfimaFps = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/P_LPSP_FP_CH.prefab";
-        public const string ShotgunPump = "Assets/AlterunaFPS/Models/Shotgun_Pump_East.RIg.fbx";
+        public const string InfimaFps = "Viewmodel/P_LPSP_FP_CH";
+        public const string InfimaFpsAsset = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/P_LPSP_FP_CH.prefab";
+        public const string ShotgunPump = "Viewmodel/Shotgun_Pump";
+        public const string ShotgunPumpAsset = "Assets/AlterunaFPS/Models/Shotgun_Pump_East.RIg.fbx";
         public const string ShotgunAuto = "Assets/AlterunaFPS/Models/Shotgun_Auto_East.Rig.fbx";
         public const string AmmoCrate = "KayKit/box_A";
         public const string MedkitCrate = "KayKit/box_A";
@@ -40,6 +44,15 @@ namespace ShikiShiro
         public static GameObject TryInstantiate(string path, Transform parent)
         {
             GameObject prefab = LoadPrefab(path);
+            if (prefab == null && path == InfimaFps)
+            {
+                prefab = LoadPrefab(InfimaFpsAsset);
+            }
+
+            if (prefab == null && path == ShotgunPump)
+            {
+                prefab = LoadPrefab(ShotgunPumpAsset);
+            }
             if (prefab == null)
             {
                 return null;
@@ -104,6 +117,41 @@ namespace ShikiShiro
             }
 
             return visual;
+        }
+
+        public static GameObject AttachCreature(Transform parent, string path, float height)
+        {
+            GameObject visual = TryInstantiate(path, parent);
+            if (visual == null)
+            {
+                return null;
+            }
+
+            StripVendorControls(visual);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+            DisableColliders(visual);
+            RepairBrokenShaders(visual);
+            EnsureHeight(visual, height);
+            return visual;
+        }
+
+        public static void ForceHeight(GameObject go, float height)
+        {
+            if (go == null || height < 0.05f)
+            {
+                return;
+            }
+
+            Bounds? bounds = CombinedBounds(go);
+            if (!bounds.HasValue || bounds.Value.size.y < 0.05f)
+            {
+                go.transform.localScale *= height;
+                return;
+            }
+
+            go.transform.localScale *= height / bounds.Value.size.y;
         }
 
         public static Bounds? WorldBounds(GameObject go)
@@ -454,6 +502,31 @@ namespace ShikiShiro
             }
         }
 
+        private static void StripVendorControls(GameObject go)
+        {
+            MonoBehaviour[] behaviours = go.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] == null)
+                {
+                    continue;
+                }
+
+                string typeName = behaviours[i].GetType().Name;
+                if (typeName == "THC6_ctrl")
+                {
+                    behaviours[i].enabled = false;
+                    Object.Destroy(behaviours[i]);
+                }
+            }
+
+            foreach (CharacterController controller in go.GetComponentsInChildren<CharacterController>(true))
+            {
+                controller.enabled = false;
+                Object.Destroy(controller);
+            }
+        }
+
         private static void StripRuntimeJunk(GameObject go)
         {
             foreach (Camera camera in go.GetComponentsInChildren<Camera>(true))
@@ -499,7 +572,8 @@ namespace ShikiShiro
 
         private static bool KeepsAuthoredLook(string path)
         {
-            return IsProjectAsset(path) || (!string.IsNullOrEmpty(path) && path.StartsWith("Characters/"));
+            return IsProjectAsset(path)
+                || (!string.IsNullOrEmpty(path) && (path.StartsWith("Characters/") || path.StartsWith("Viewmodel/")));
         }
 
         private static bool IsProjectAsset(string path)

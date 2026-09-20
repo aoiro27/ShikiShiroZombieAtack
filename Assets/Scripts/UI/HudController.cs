@@ -138,6 +138,12 @@ namespace ShikiShiro
             ShowBanner("ウェーブ  " + wave, "ちかづいてる", new Color(1f, 0.45f, 0.22f), 64, 2.4f, 1.22f, 0.18f);
         }
 
+        public void ShowBossAppear(int wave, int count)
+        {
+            string sub = count <= 1 ? "このウェーブは1体" : "このウェーブは同時に" + count + "体";
+            ShowBanner("ボス出現  WAVE " + wave, sub, new Color(1f, 0.22f, 0.18f), 70, 3.2f, 1.28f, 0.28f);
+        }
+
         public void ShowCountdown(int seconds, int wave)
         {
             if (_countdownRoot == null)
@@ -203,6 +209,11 @@ namespace ShikiShiro
 
         private void Update()
         {
+            if (_session != null)
+            {
+                RefreshWave();
+            }
+
             if (_announceUntil > 0f && Time.unscaledTime > _announceUntil)
             {
                 _announce.text = string.Empty;

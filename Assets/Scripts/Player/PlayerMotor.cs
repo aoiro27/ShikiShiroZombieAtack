@@ -96,7 +96,7 @@ namespace ShikiShiro
             {
                 float g = _config.GyroLookSensitivity;
                 Yaw += gyro.x * g;
-                Pitch += gyro.y * g;
+                Pitch -= gyro.y * g;
             }
             else if (look.sqrMagnitude <= 0.0001f && CanUseMouseLook())
             {

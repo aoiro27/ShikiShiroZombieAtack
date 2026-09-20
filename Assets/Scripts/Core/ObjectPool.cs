@@ -31,9 +31,17 @@ namespace ShikiShiro
 
         public void Release(T item)
         {
+            if (item == null)
+            {
+                return;
+            }
+
             item.gameObject.SetActive(false);
             item.transform.SetParent(_parent, false);
-            _inactive.Push(item);
+            if (!_inactive.Contains(item))
+            {
+                _inactive.Push(item);
+            }
         }
 
         public IReadOnlyList<T> All => _all;

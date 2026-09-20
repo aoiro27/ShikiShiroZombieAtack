@@ -136,7 +136,7 @@ namespace ShikiShiro
             if (_session != null)
             {
                 Vector3 popup = info.Point.sqrMagnitude > 0.01f ? info.Point : boom;
-                int gained = _session.RegisterBalloonPop();
+                int gained = _session.RegisterBalloonPop(info.Amount);
                 _session.NotifyHitPopup(new HitPopupInfo(popup, gained, _session.Combo, false, true));
             }
 

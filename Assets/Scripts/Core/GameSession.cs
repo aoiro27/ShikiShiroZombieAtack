@@ -44,7 +44,7 @@ namespace ShikiShiro
 
         public void NotifyWaveClear()
         {
-            if (State != SessionState.Playing)
+            if (State == SessionState.GameOver)
             {
                 return;
             }
@@ -55,13 +55,23 @@ namespace ShikiShiro
         public void AdvanceWave()
         {
             Wave++;
-            SetState(SessionState.Countdown);
+            BeginCountdown();
             WaveChanged?.Invoke(Wave);
+        }
+
+        public void BeginCountdown()
+        {
+            if (State == SessionState.GameOver)
+            {
+                return;
+            }
+
+            SetState(SessionState.Countdown);
         }
 
         public void BeginCombat()
         {
-            if (State != SessionState.Countdown)
+            if (State == SessionState.GameOver)
             {
                 return;
             }
@@ -69,7 +79,7 @@ namespace ShikiShiro
             SetState(SessionState.Playing);
         }
 
-        public int RegisterCombatHit(ZombieKind kind, bool headshot, bool kill)
+        public int RegisterCombatHit(float damage, bool headshot, bool kill)
         {
             if (State != SessionState.Playing)
             {
@@ -78,36 +88,17 @@ namespace ShikiShiro
 
             ComboTimer = _comboWindow;
             Combo++;
-            int gained;
             if (kill)
             {
                 Kills++;
-                int baseScore = kind switch
-                {
-                    ZombieKind.Runner => 120,
-                    ZombieKind.Brute => 350,
-                    _ => 80
-                };
-
-                if (headshot)
-                {
-                    baseScore = Mathf.RoundToInt(baseScore * 1.8f);
-                }
-
-                int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
-                gained = baseScore * comboBonus;
-            }
-            else
-            {
-                gained = headshot ? 16 : 10;
             }
 
-            AddScore(gained);
+            int gained = AwardDamage(damage);
             ComboChanged?.Invoke(Combo);
             return gained;
         }
 
-        public int RegisterBalloonPop()
+        public int RegisterBalloonPop(float damage)
         {
             if (State != SessionState.Playing)
             {
@@ -116,10 +107,17 @@ namespace ShikiShiro
 
             ComboTimer = _comboWindow;
             Combo++;
-            int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
-            int gained = 50 * comboBonus;
-            AddScore(gained);
+            int gained = AwardDamage(damage);
             ComboChanged?.Invoke(Combo);
+            return gained;
+        }
+
+        private int AwardDamage(float damage)
+        {
+            int raw = Mathf.Max(1, Mathf.RoundToInt(damage));
+            int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
+            int gained = raw * comboBonus;
+            AddScore(gained);
             return gained;
         }
 

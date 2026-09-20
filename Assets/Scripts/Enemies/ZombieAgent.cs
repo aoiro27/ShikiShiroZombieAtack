@@ -39,6 +39,8 @@ namespace ShikiShiro
         private GameObject _walkerVisual;
         private GameObject _runnerVisual;
         private GameObject _bruteVisual;
+        private GameObject _bossVisual;
+        private Animator _bossAnim;
 
         public void BuildVisual()
         {
@@ -107,12 +109,12 @@ namespace ShikiShiro
             _nextAttack = Time.time + 0.75f;
             _nextGroan = Time.time + Random.Range(1.2f, 4.5f);
             _controller.enabled = true;
+            gameObject.SetActive(true);
             _visual.gameObject.SetActive(true);
             _visual.localScale = Vector3.one;
             _visual.localRotation = Quaternion.identity;
             _visual.localPosition = Vector3.zero;
             ApplyKind(kind);
-            gameObject.SetActive(true);
         }
 
         public void Warp(Vector3 position)
@@ -140,22 +142,36 @@ namespace ShikiShiro
                 return;
             }
 
-            _health -= info.Amount;
+            float dealt = info.Amount;
+            if (Kind == ZombieKind.Boss)
+            {
+                if (info.ChainDepth > 0)
+                {
+                    dealt = Mathf.Min(dealt, 18f);
+                }
+                else if (info.Weapon == WeaponId.Shotgun)
+                {
+                    dealt = Mathf.Min(dealt, info.IsHeadshot ? 78f : 52f);
+                }
+            }
+
+            _health -= dealt;
             if (info.ChainDepth == 0)
             {
                 _fx.Blood(info.Point, info.Direction, info.IsHeadshot);
                 _sfx.PlayFlesh(info.IsHeadshot);
-                _stagger = info.IsHeadshot ? 0.45f : 0.12f;
+                _stagger = Kind == ZombieKind.Boss ? 0.05f : (info.IsHeadshot ? 0.45f : 0.12f);
                 Flash(info.IsHeadshot ? Color.white : new Color(1f, 0.4f, 0.4f));
+                PulseBossHit();
             }
 
             if (_health <= 0f)
             {
-                Die(info);
+                Die(info, dealt);
             }
             else if (info.ChainDepth == 0)
             {
-                int gained = _session.RegisterCombatHit(Kind, info.IsHeadshot, false);
+                int gained = _session.RegisterCombatHit(dealt, info.IsHeadshot, false);
                 _session.NotifyHitPopup(new HitPopupInfo(info.Point, gained, _session.Combo, info.IsHeadshot, false));
             }
         }
@@ -172,14 +188,21 @@ namespace ShikiShiro
                 return;
             }
 
-            _bob += Time.deltaTime * (_moveSpeed * 1.4f);
-            _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(_bob)) * 0.03f, 0f);
-            _visual.localRotation = Quaternion.identity;
+            if (Kind != ZombieKind.Boss)
+            {
+                _bob += Time.deltaTime * (_moveSpeed * 1.4f);
+                _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(_bob)) * 0.03f, 0f);
+                _visual.localRotation = Quaternion.identity;
+            }
 
             if (_stagger > 0f)
             {
                 _stagger -= Time.deltaTime;
-                _motion?.Tick(false, false, false, 0f);
+                if (Kind != ZombieKind.Boss)
+                {
+                    _motion?.Tick(false, false, false, 0f);
+                }
+
                 return;
             }
 
@@ -237,12 +260,16 @@ namespace ShikiShiro
                 }
             }
 
-            _motion?.Tick(chasing, swing, false, _moveSpeed);
+            DriveBossAnim(chasing, swing);
+            if (Kind != ZombieKind.Boss)
+            {
+                _motion?.Tick(chasing, swing, false, _moveSpeed);
+            }
         }
 
         private bool CanSeeTarget()
         {
-            Vector3 from = transform.position + Vector3.up * 1.15f;
+            Vector3 from = transform.position + Vector3.up * Mathf.Max(1.15f, _controller.height * 0.55f);
             Vector3 to = _target.position + Vector3.up * 1.15f;
             Vector3 delta = to - from;
             float len = delta.magnitude;
@@ -320,6 +347,10 @@ namespace ShikiShiro
 
         private void AvoidNeighbors(ref Vector3 dir)
         {
+            if (Kind == ZombieKind.Boss)
+            {
+                return;
+            }
             if (ZombieMask < 0)
             {
                 ZombieMask = LayerMask.GetMask("Zombie");
@@ -354,15 +385,15 @@ namespace ShikiShiro
             }
         }
 
-        private void Die(in DamageInfo info)
+        private void Die(in DamageInfo info, float dealt)
         {
             IsAlive = false;
             _controller.enabled = false;
             CancelInvoke(nameof(RestoreColor));
             Vector3 pos = transform.position;
-            Vector3 boom = pos + Vector3.up * 0.9f;
+            Vector3 boom = pos + Vector3.up * (Kind == ZombieKind.Boss ? Mathf.Max(1.6f, _controller.height * 0.45f) : 0.9f);
             Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
-            float scale = Kind == ZombieKind.Brute ? 1.9f : 1.15f;
+            float scale = Kind == ZombieKind.Boss ? 4.8f : Kind == ZombieKind.Brute ? 1.9f : 1.15f;
             scale *= info.ChainDepth > 0 ? 1.25f : 1f;
             _fx.Explosion(boom, dir, scale);
             if (info.ChainDepth == 0)
@@ -372,17 +403,43 @@ namespace ShikiShiro
                 _fx.KillPunch(scale);
             }
 
-            int gained = _session.RegisterCombatHit(Kind, info.IsHeadshot, true);
+            int gained = _session.RegisterCombatHit(dealt, info.IsHeadshot, true);
             _session.NotifyHitPopup(new HitPopupInfo(info.Point, gained, _session.Combo, info.IsHeadshot, true));
             _horde.NotifyKilled(this);
-            _horde.ChainBurst(this, info);
-            if (info.ChainDepth == 0 && Random.value < 0.1f)
+            if (Kind != ZombieKind.Boss)
+            {
+                _horde.ChainBurst(this, info);
+            }
+            if (info.ChainDepth == 0 && (Kind == ZombieKind.Boss || Random.value < 0.1f))
             {
                 _horde.DropPickup(pos);
             }
 
             _visual.gameObject.SetActive(false);
-            _horde.Despawn(this);
+            _horde?.Despawn(this);
+        }
+
+        public void ForceDespawn()
+        {
+            if (!IsAlive && !gameObject.activeSelf)
+            {
+                return;
+            }
+
+            IsAlive = false;
+            if (_controller != null)
+            {
+                _controller.enabled = false;
+            }
+
+            CancelInvoke(nameof(RestoreColor));
+            if (_visual != null)
+            {
+                _visual.gameObject.SetActive(false);
+            }
+
+            gameObject.SetActive(false);
+            _horde?.Despawn(this);
         }
 
         private void ApplyKind(ZombieKind kind)
@@ -390,6 +447,15 @@ namespace ShikiShiro
             string model = GameAssets.ZombieWalker;
             switch (kind)
             {
+                case ZombieKind.Boss:
+                    _maxHealth = 2800f + Mathf.Max(0, _session != null ? _session.Wave - 3 : 0) * 550f;
+                    _moveSpeed = 1.55f;
+                    _damage = 38f;
+                    _attackRange = 4.2f;
+                    _attackCooldown = 1.35f;
+                    transform.localScale = Vector3.one;
+                    model = GameAssets.BossCreature;
+                    break;
                 case ZombieKind.Runner:
                     _maxHealth = 55f;
                     _moveSpeed = 2.4f;
@@ -421,6 +487,7 @@ namespace ShikiShiro
 
             _health = _maxHealth;
             ReplaceVisual(model);
+            FitCollision();
         }
 
         private void ReplaceVisual(string modelPath)
@@ -428,6 +495,14 @@ namespace ShikiShiro
             EnsureCached(ref _walkerVisual, GameAssets.ZombieWalker);
             EnsureCached(ref _runnerVisual, GameAssets.ZombieRunner);
             EnsureCached(ref _bruteVisual, GameAssets.ZombieBrute);
+            if (Kind == ZombieKind.Boss)
+            {
+                EnsureBossVisual();
+            }
+            else if (_bossVisual != null)
+            {
+                _bossVisual.SetActive(false);
+            }
             if (_walkerVisual != null)
             {
                 _walkerVisual.SetActive(modelPath == GameAssets.ZombieWalker);
@@ -443,10 +518,110 @@ namespace ShikiShiro
                 _bruteVisual.SetActive(modelPath == GameAssets.ZombieBrute);
             }
 
-            _renderers = _visual.GetComponentsInChildren<Renderer>();
+            if (_bossVisual != null)
+            {
+                bool boss = Kind == ZombieKind.Boss;
+                _bossVisual.SetActive(boss);
+                if (boss)
+                {
+                    GameAssets.ForceHeight(_bossVisual, 8.8f);
+                    _bossAnim = _bossVisual.GetComponentInChildren<Animator>(true);
+                    if (_bossAnim != null)
+                    {
+                        _bossAnim.applyRootMotion = false;
+                        _bossAnim.SetInteger("battle", 1);
+                        _bossAnim.SetInteger("moving", 1);
+                    }
+                }
+            }
+
+            _renderers = _visual.GetComponentsInChildren<Renderer>(true);
             GameAssets.SetLayerRecursively(gameObject, gameObject.layer);
             RestoreColor();
-            _motion?.Bind(_visual);
+            if (Kind != ZombieKind.Boss)
+            {
+                _motion?.Bind(_visual);
+            }
+        }
+
+        private void EnsureBossVisual()
+        {
+            if (_bossVisual != null)
+            {
+                return;
+            }
+
+            _bossVisual = GameAssets.AttachCreature(_visual, GameAssets.BossCreature, 8.8f);
+            if (_bossVisual == null)
+            {
+                _bossVisual = GameAssets.AttachCreature(_visual, GameAssets.BossCreatureAsset, 8.8f);
+            }
+
+            if (_bossVisual != null)
+            {
+                GameAssets.ForceHeight(_bossVisual, 8.8f);
+            }
+        }
+
+        private void FitCollision()
+        {
+            if (Kind == ZombieKind.Boss)
+            {
+                Bounds? bounds = GameAssets.WorldBounds(_visual.gameObject);
+                float height = bounds.HasValue ? Mathf.Clamp(bounds.Value.size.y, 6.4f, 11f) : 8.8f;
+                float radius = bounds.HasValue
+                    ? Mathf.Clamp(Mathf.Max(bounds.Value.extents.x, bounds.Value.extents.z) * 0.38f, 1.15f, 2.45f)
+                    : 1.55f;
+                _controller.height = height;
+                _controller.radius = radius;
+                _controller.center = new Vector3(0f, height * 0.5f, 0f);
+                if (_hurtbox != null)
+                {
+                    _hurtbox.height = height * 1.05f;
+                    _hurtbox.radius = radius * 1.15f;
+                    _hurtbox.center = new Vector3(0f, height * 0.52f, 0f);
+                }
+
+                return;
+            }
+
+            _controller.height = 1.9f;
+            _controller.radius = 0.45f;
+            _controller.center = new Vector3(0f, 0.95f, 0f);
+            if (_hurtbox != null)
+            {
+                _hurtbox.height = 2.15f;
+                _hurtbox.radius = 0.62f;
+                _hurtbox.center = new Vector3(0f, 1.05f, 0f);
+            }
+        }
+
+        private void DriveBossAnim(bool chasing, bool swing)
+        {
+            if (Kind != ZombieKind.Boss || _bossAnim == null || !_bossAnim.isActiveAndEnabled)
+            {
+                return;
+            }
+
+            _bossAnim.SetInteger("battle", 1);
+            if (swing)
+            {
+                _bossAnim.SetInteger("moving", 2);
+            }
+            else
+            {
+                _bossAnim.SetInteger("moving", chasing ? 1 : 0);
+            }
+        }
+
+        private void PulseBossHit()
+        {
+            if (Kind != ZombieKind.Boss || _bossAnim == null || !_bossAnim.isActiveAndEnabled)
+            {
+                return;
+            }
+
+            _bossAnim.SetInteger("moving", Random.value < 0.5f ? 8 : 9);
         }
 
         private void EnsureCached(ref GameObject slot, string path)

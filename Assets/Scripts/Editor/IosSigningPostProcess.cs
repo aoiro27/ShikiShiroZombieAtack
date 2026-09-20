@@ -70,6 +70,13 @@ namespace ShikiShiro.EditorTools
             Stamp(proj, proj.GetUnityMainTargetGuid(), team);
             Stamp(proj, proj.GetUnityFrameworkTargetGuid(), team);
             proj.WriteToFile(pbxPath);
+
+            string plistPath = path + "/Info.plist";
+            var plist = new PlistDocument();
+            plist.ReadFromFile(plistPath);
+            plist.root.SetString("CFBundleDisplayName", "しきしろぞんびーず");
+            plist.root.SetString("CFBundleName", "しきしろぞんびーず");
+            plist.WriteToFile(plistPath);
 #endif
         }
 

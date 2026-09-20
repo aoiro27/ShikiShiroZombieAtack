@@ -23,6 +23,7 @@ namespace ShikiShiro
         private TpsCamera _camera;
         private CombatFx _fx;
         private ProceduralSfx _sfx;
+        private GameSession _session;
         private Transform _muzzle;
         private Transform _viewRoot;
         private Vector3[] _hipPos;
@@ -52,13 +53,14 @@ namespace ShikiShiro
             }
         }
 
-        public void Initialize(GameInput input, PlayerMotor motor, TpsCamera camera, CombatFx fx, ProceduralSfx sfx)
+        public void Initialize(GameInput input, PlayerMotor motor, TpsCamera camera, CombatFx fx, ProceduralSfx sfx, GameSession session)
         {
             _input = input;
             _motor = motor;
             _camera = camera;
             _fx = fx;
             _sfx = sfx;
+            _session = session;
             _hurtMask = LayerMask.GetMask("Zombie");
             _blockMask = LayerMask.GetMask("Obstacle", "Ground", "Default");
             BuildGunVisual();
@@ -76,6 +78,12 @@ namespace ShikiShiro
         {
             if (_input == null || Time.timeScale <= 0.001f)
             {
+                return;
+            }
+
+            if (_session != null && _session.State != SessionState.Playing)
+            {
+                AnimateViewmodel();
                 return;
             }
 
@@ -200,7 +208,7 @@ namespace ShikiShiro
                     continue;
                 }
 
-                if (AlreadyHit(damageable, victimCount))
+                if (AlreadyHit(damageable, victimCount) && Current.Pellets <= 1)
                 {
                     continue;
                 }
@@ -355,6 +363,10 @@ namespace ShikiShiro
                 vmCam.nearClipPlane = 0.01f;
                 vmCam.farClipPlane = 3.5f;
                 vmCam.allowHDR = false;
+                vmCam.allowMSAA = false;
+                vmCam.enabled = true;
+                vmCam.targetDisplay = 0;
+                vmCam.stereoTargetEye = StereoTargetEyeMask.None;
                 vmCam.cullingMask = 1 << viewLayer;
                 _camera.UnityCamera.cullingMask &= ~(1 << viewLayer);
                 var vmLight = vmCamGo.AddComponent<Light>();
@@ -595,6 +607,7 @@ namespace ShikiShiro
 
             StripInfimaRuntime(character);
             StripMissingScripts(character);
+            GameAssets.RepairBrokenShaders(character);
             BindAnimEvents(character);
             Transform socket = FindDeep(character.transform, "SOCKET_Camera");
             if (socket != null)
@@ -750,6 +763,11 @@ namespace ShikiShiro
 
         private static void StripInfimaRuntime(GameObject character)
         {
+            foreach (Camera camera in character.GetComponentsInChildren<Camera>(true))
+            {
+                camera.enabled = false;
+            }
+
             foreach (Canvas canvas in character.GetComponentsInChildren<Canvas>(true))
             {
                 canvas.enabled = false;

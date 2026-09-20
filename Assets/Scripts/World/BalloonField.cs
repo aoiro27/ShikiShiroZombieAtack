@@ -8,7 +8,8 @@ namespace ShikiShiro
 {
     public sealed class BalloonField : MonoBehaviour
     {
-        private const int Count = 140;
+        private const int AmbientCount = 140;
+        private const int SwarmCount = 110;
 
         private ArenaBuilder _arena;
         private HordeDirector _horde;
@@ -16,7 +17,7 @@ namespace ShikiShiro
         private ProceduralSfx _sfx;
         private GameSession _session;
         private Sprite[] _sprites;
-        private readonly List<BalloonProp> _balloons = new List<BalloonProp>(Count);
+        private readonly List<BalloonProp> _balloons = new List<BalloonProp>(AmbientCount + SwarmCount);
 
         public static BalloonField Spawn(Transform parent, ArenaBuilder arena, HordeDirector horde, CombatFx fx, ProceduralSfx sfx, GameSession session)
         {
@@ -49,7 +50,7 @@ namespace ShikiShiro
                 return;
             }
 
-            EnsurePool();
+            EnsurePool(AmbientCount);
             for (int i = 0; i < _balloons.Count; i++)
             {
                 BalloonProp balloon = _balloons[i];
@@ -58,7 +59,7 @@ namespace ShikiShiro
                     continue;
                 }
 
-                if (!TryPlace(out Vector3 pos))
+                if (i >= AmbientCount || !TryPlace(out Vector3 pos))
                 {
                     balloon.gameObject.SetActive(false);
                     continue;
@@ -68,9 +69,42 @@ namespace ShikiShiro
             }
         }
 
-        private void EnsurePool()
+        public void SwarmAround(Vector3 center, int count)
         {
-            while (_balloons.Count < Count)
+            if (_sprites == null || _sprites.Length == 0)
+            {
+                _sprites = LoadSprites();
+            }
+
+            if (_sprites.Length == 0 || _arena == null)
+            {
+                return;
+            }
+
+            int extra = Mathf.Max(0, count);
+            EnsurePool(AmbientCount + extra);
+            int placed = 0;
+            for (int i = AmbientCount; i < _balloons.Count && placed < extra; i++)
+            {
+                BalloonProp balloon = _balloons[i];
+                if (balloon == null || !TryPlaceNear(center, out Vector3 pos))
+                {
+                    if (balloon != null)
+                    {
+                        balloon.gameObject.SetActive(false);
+                    }
+
+                    continue;
+                }
+
+                balloon.Setup(_sprites[Random.Range(0, _sprites.Length)], pos, _horde, _fx, _sfx, _session);
+                placed++;
+            }
+        }
+
+        private void EnsurePool(int size)
+        {
+            while (_balloons.Count < size)
             {
                 var go = new GameObject("Balloon");
                 go.transform.SetParent(transform, false);
@@ -102,6 +136,32 @@ namespace ShikiShiro
             }
 
             return false;
+        }
+
+        private bool TryPlaceNear(Vector3 center, out Vector3 pos)
+        {
+            pos = Vector3.zero;
+            for (int i = 0; i < 16; i++)
+            {
+                float angle = Random.Range(0f, 360f);
+                float radius = Random.Range(2.4f, 14f);
+                Vector3 ground = center;
+                ground.y = _arena.SpawnPoint.y;
+                ground += Quaternion.Euler(0f, angle, 0f) * Vector3.forward * radius;
+                ground = _arena.SnapToStreet(ground);
+                ground = _arena.ClampInside(ground, 2.2f);
+                if (!_arena.Contains(ground, 2.2f))
+                {
+                    continue;
+                }
+
+                pos = ground + Vector3.up * Random.Range(1.8f, 7.2f);
+                return true;
+            }
+
+            pos = center + Random.insideUnitSphere * 6f;
+            pos.y = Mathf.Abs(pos.y) + 2.4f;
+            return true;
         }
 
         private static Sprite[] LoadSprites()

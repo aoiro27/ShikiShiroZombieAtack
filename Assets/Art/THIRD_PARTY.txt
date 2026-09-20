@@ -52,3 +52,5 @@ Unity Asset Store (standard EULA), used at runtime:
 - FREE Shirtless Zombie (Studio New Punch)
 - FREE Zombie Male AAB (Studio New Punch)
 - Character Pack: Zombie Sample (Supercyan)
+- True Horror Creatures / Nightmare Creature (Grigoriy Arx)
+  Boss mesh: Assets/True_Horror_Creatures/Horror_creature6_v1.0

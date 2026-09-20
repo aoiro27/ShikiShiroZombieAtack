@@ -132,7 +132,7 @@ namespace ShikiShiro
             RenderSettings.fogDensity = 0.0012f;
 
             var weapons = playerGo.AddComponent<WeaponController>();
-            weapons.Initialize(input, motor, cameraRig, fx, sfx);
+            weapons.Initialize(input, motor, cameraRig, fx, sfx, session);
 
             var hudGo = new GameObject("HudSystem");
             var hud = hudGo.AddComponent<HudController>();

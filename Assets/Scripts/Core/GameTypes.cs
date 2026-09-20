@@ -15,7 +15,8 @@ namespace ShikiShiro
     {
         Walker,
         Runner,
-        Brute
+        Brute,
+        Boss
     }
 
     public enum WeaponId

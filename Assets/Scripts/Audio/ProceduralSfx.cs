@@ -31,6 +31,8 @@ namespace ShikiShiro
         private AudioClip _shotgunSynth;
         private AudioClip _explosionSynth;
         private AudioClip _balloonBurst;
+        private AudioClip _bossWarning;
+        private AudioClip _gameOver;
         private float _nextGroanAt;
         private Coroutine _clearSting;
 
@@ -69,6 +71,9 @@ namespace ShikiShiro
             {
                 _balloonBurst.LoadAudioData();
             }
+
+            _bossWarning = LoadNamedClip("warning", "Assets/warning.mp3");
+            _gameOver = LoadNamedClip("gameover", "Assets/gameover.mp3");
         }
 
         public void PlayBalloonBurst()
@@ -271,7 +276,16 @@ namespace ShikiShiro
 
         private static AudioClip LoadWaveClearClip()
         {
-            AudioClip clip = Resources.Load<AudioClip>("clear");
+            return LoadNamedClip("clear", null);
+        }
+
+        private static AudioClip LoadNamedClip(string resourceName, string assetPath)
+        {
+            AudioClip clip = Resources.Load<AudioClip>(resourceName);
+            if (clip == null && !string.IsNullOrEmpty(assetPath))
+            {
+                clip = GameAssets.Load<AudioClip>(assetPath);
+            }
 
             if (clip != null && !clip.preloadAudioData)
             {
@@ -279,6 +293,60 @@ namespace ShikiShiro
             }
 
             return clip;
+        }
+
+        public void PlayBossWarning()
+        {
+            if (_bossWarning == null)
+            {
+                _bossWarning = LoadNamedClip("warning", "Assets/warning.mp3");
+            }
+
+            if (_sting == null || _bossWarning == null)
+            {
+                return;
+            }
+
+            _sting.Stop();
+            _sting.pitch = 1f;
+            _sting.volume = 1f;
+            if (!_bossWarning.preloadAudioData)
+            {
+                _bossWarning.LoadAudioData();
+            }
+
+            _sting.clip = _bossWarning;
+            _sting.Play();
+        }
+
+        public void PlayGameOver()
+        {
+            if (_gameOver == null)
+            {
+                _gameOver = LoadNamedClip("gameover", "Assets/gameover.mp3");
+            }
+
+            if (_sting == null || _gameOver == null)
+            {
+                return;
+            }
+
+            if (_bgm != null)
+            {
+                _bgm.volume = 0.08f;
+                _bgm.pitch = 0.85f;
+            }
+
+            _sting.Stop();
+            _sting.pitch = 1f;
+            _sting.volume = 1f;
+            if (!_gameOver.preloadAudioData)
+            {
+                _gameOver.LoadAudioData();
+            }
+
+            _sting.clip = _gameOver;
+            _sting.Play();
         }
 
         public void PlayWaveStart()
@@ -311,8 +379,7 @@ namespace ShikiShiro
             }
             else if (state == SessionState.GameOver)
             {
-                _bgm.volume = 0.16f;
-                _bgm.pitch = 0.85f;
+                PlayGameOver();
             }
             else
             {
