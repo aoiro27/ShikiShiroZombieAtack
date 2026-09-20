@@ -107,6 +107,22 @@ namespace ShikiShiro
             return gained;
         }
 
+        public int RegisterBalloonPop()
+        {
+            if (State != SessionState.Playing)
+            {
+                return 0;
+            }
+
+            ComboTimer = _comboWindow;
+            Combo++;
+            int comboBonus = 1 + Mathf.Min(Combo / 5, 4);
+            int gained = 50 * comboBonus;
+            AddScore(gained);
+            ComboChanged?.Invoke(Combo);
+            return gained;
+        }
+
         public void NotifyHitPopup(in HitPopupInfo info)
         {
             HitPopup?.Invoke(info);

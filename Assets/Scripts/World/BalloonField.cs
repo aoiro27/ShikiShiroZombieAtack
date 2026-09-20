@@ -8,16 +8,17 @@ namespace ShikiShiro
 {
     public sealed class BalloonField : MonoBehaviour
     {
-        private const int Count = 72;
+        private const int Count = 140;
 
         private ArenaBuilder _arena;
         private HordeDirector _horde;
         private CombatFx _fx;
         private ProceduralSfx _sfx;
+        private GameSession _session;
         private Sprite[] _sprites;
         private readonly List<BalloonProp> _balloons = new List<BalloonProp>(Count);
 
-        public static BalloonField Spawn(Transform parent, ArenaBuilder arena, HordeDirector horde, CombatFx fx, ProceduralSfx sfx)
+        public static BalloonField Spawn(Transform parent, ArenaBuilder arena, HordeDirector horde, CombatFx fx, ProceduralSfx sfx, GameSession session)
         {
             var root = new GameObject("BalloonField");
             root.transform.SetParent(parent, false);
@@ -26,6 +27,7 @@ namespace ShikiShiro
             field._horde = horde;
             field._fx = fx;
             field._sfx = sfx;
+            field._session = session;
             field._sprites = LoadSprites();
             if (field._sprites.Length == 0)
             {
@@ -62,7 +64,7 @@ namespace ShikiShiro
                     continue;
                 }
 
-                balloon.Setup(_sprites[Random.Range(0, _sprites.Length)], pos, _horde, _fx, _sfx);
+                balloon.Setup(_sprites[Random.Range(0, _sprites.Length)], pos, _horde, _fx, _sfx, _session);
             }
         }
 

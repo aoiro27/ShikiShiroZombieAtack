@@ -38,7 +38,7 @@ namespace ShikiShiro
             pickupRoot.SetParent(transform, false);
             _pickups = new ObjectPool<WorldPickup>(CreatePickup, pickupRoot, 12);
 
-            _balloons = BalloonField.Spawn(transform, arena, this, fx, sfx);
+            _balloons = BalloonField.Spawn(transform, arena, this, fx, sfx, session);
         }
 
         public void StartWaves()

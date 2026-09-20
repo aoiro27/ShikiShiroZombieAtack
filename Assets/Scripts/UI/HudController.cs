@@ -108,12 +108,34 @@ namespace ShikiShiro
 
         public void ShowWaveClear(int wave)
         {
-            ShowBanner($"WAVE {wave}  CLEAR", "エリア確保", new Color(1f, 0.88f, 0.38f), 72, 3.5f, 1.38f, 0.55f);
+            ClearBanners();
+            if (_countdownRoot == null)
+            {
+                return;
+            }
+
+            _countdownRoot.SetActive(true);
+            if (_countdownWave != null)
+            {
+                _countdownWave.text = "ウェーブ  " + wave;
+                _countdownWave.resizeTextMaxSize = 110;
+            }
+
+            if (_countdownNumber != null)
+            {
+                _countdownNumber.text = "クリア!";
+                _countdownNumber.color = new Color(1f, 0.92f, 0.38f);
+                _countdownNumber.resizeTextMaxSize = 280;
+                _countdownPunch = 1.22f;
+                _countdownNumber.rectTransform.localScale = Vector3.one * _countdownPunch;
+            }
+
+            _clearFlashAlpha = 0.72f;
         }
 
         public void ShowWaveStart(int wave)
         {
-            ShowBanner($"WAVE {wave}", "接近中", new Color(1f, 0.45f, 0.22f), 64, 2.4f, 1.22f, 0.18f);
+            ShowBanner("ウェーブ  " + wave, "ちかづいてる", new Color(1f, 0.45f, 0.22f), 64, 2.4f, 1.22f, 0.18f);
         }
 
         public void ShowCountdown(int seconds, int wave)
@@ -123,22 +145,22 @@ namespace ShikiShiro
                 return;
             }
 
-            _announceUntil = 0f;
-            if (_announce != null)
-            {
-                _announce.text = string.Empty;
-            }
-
-            if (_announceSub != null)
-            {
-                _announceSub.text = string.Empty;
-            }
-
+            ClearBanners();
             _countdownRoot.SetActive(true);
-            _countdownWave.text = $"WAVE {wave}";
-            _countdownNumber.text = seconds.ToString();
-            _countdownPunch = 1.42f;
-            _countdownNumber.rectTransform.localScale = Vector3.one * _countdownPunch;
+            if (_countdownWave != null)
+            {
+                _countdownWave.text = "ウェーブ  " + wave;
+                _countdownWave.resizeTextMaxSize = 88;
+            }
+
+            if (_countdownNumber != null)
+            {
+                _countdownNumber.text = seconds.ToString();
+                _countdownNumber.color = Color.white;
+                _countdownNumber.resizeTextMaxSize = 420;
+                _countdownPunch = 1.42f;
+                _countdownNumber.rectTransform.localScale = Vector3.one * _countdownPunch;
+            }
         }
 
         public void HideCountdown()
@@ -163,6 +185,20 @@ namespace ShikiShiro
 
             _clearFlashAlpha = flash;
             _announceUntil = Time.unscaledTime + seconds;
+        }
+
+        private void ClearBanners()
+        {
+            _announceUntil = 0f;
+            if (_announce != null)
+            {
+                _announce.text = string.Empty;
+            }
+
+            if (_announceSub != null)
+            {
+                _announceSub.text = string.Empty;
+            }
         }
 
         private void Update()
@@ -666,19 +702,39 @@ namespace ShikiShiro
             dim.raycastTarget = false;
             _countdownRoot = root;
 
-            _countdownWave = CreateText(root.transform, "CountdownWave", Vector2.zero, new Vector2(1400f, 140f), 72, TextAnchor.MiddleCenter);
+            _countdownWave = CreateText(root.transform, "CountdownWave", Vector2.zero, new Vector2(2200f, 180f), 96, TextAnchor.MiddleCenter);
             var waveRt = _countdownWave.rectTransform;
-            waveRt.anchorMin = waveRt.anchorMax = waveRt.pivot = new Vector2(0.5f, 0.72f);
+            waveRt.anchorMin = new Vector2(0.05f, 0.72f);
+            waveRt.anchorMax = new Vector2(0.95f, 0.88f);
+            waveRt.pivot = new Vector2(0.5f, 0.5f);
+            waveRt.offsetMin = Vector2.zero;
+            waveRt.offsetMax = Vector2.zero;
             waveRt.anchoredPosition = Vector2.zero;
+            _countdownWave.font = UiFont();
             _countdownWave.fontStyle = FontStyle.Bold;
             _countdownWave.color = new Color(1f, 0.86f, 0.42f);
+            _countdownWave.resizeTextForBestFit = true;
+            _countdownWave.resizeTextMinSize = 48;
+            _countdownWave.resizeTextMaxSize = 110;
+            _countdownWave.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _countdownWave.verticalOverflow = VerticalWrapMode.Truncate;
 
-            _countdownNumber = CreateText(root.transform, "CountdownNumber", Vector2.zero, new Vector2(1600f, 720f), 420, TextAnchor.MiddleCenter);
+            _countdownNumber = CreateText(root.transform, "CountdownNumber", Vector2.zero, new Vector2(2200f, 820f), 420, TextAnchor.MiddleCenter);
             var numRt = _countdownNumber.rectTransform;
-            numRt.anchorMin = numRt.anchorMax = numRt.pivot = new Vector2(0.5f, 0.46f);
+            numRt.anchorMin = new Vector2(0.04f, 0.18f);
+            numRt.anchorMax = new Vector2(0.96f, 0.74f);
+            numRt.pivot = new Vector2(0.5f, 0.5f);
+            numRt.offsetMin = Vector2.zero;
+            numRt.offsetMax = Vector2.zero;
             numRt.anchoredPosition = Vector2.zero;
+            _countdownNumber.font = UiFont();
             _countdownNumber.fontStyle = FontStyle.Bold;
             _countdownNumber.color = Color.white;
+            _countdownNumber.resizeTextForBestFit = true;
+            _countdownNumber.resizeTextMinSize = 120;
+            _countdownNumber.resizeTextMaxSize = 420;
+            _countdownNumber.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _countdownNumber.verticalOverflow = VerticalWrapMode.Truncate;
 
             root.SetActive(false);
         }
@@ -899,17 +955,34 @@ namespace ShikiShiro
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             var text = go.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (text.font == null)
-            {
-                text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            }
+            text.font = UiFont();
             text.fontSize = fontSize;
             text.alignment = anchor;
             text.color = Color.white;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
+        }
+
+        private static Font UiFont()
+        {
+            var font = Font.CreateDynamicFontFromOSFont(new[]
+            {
+                "HiraginoSans-W6",
+                "Hiragino Sans",
+                "Hiragino Kaku Gothic ProN",
+                "YuGothic-Bold",
+                "Yu Gothic",
+                "Noto Sans CJK JP",
+                "DroidSansFallback"
+            }, 64);
+            if (font != null)
+            {
+                return font;
+            }
+
+            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return font != null ? font : Resources.GetBuiltinResource<Font>("Arial.ttf");
         }
     }
 }

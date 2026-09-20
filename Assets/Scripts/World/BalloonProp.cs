@@ -7,6 +7,7 @@ namespace ShikiShiro
         private HordeDirector _horde;
         private CombatFx _fx;
         private ProceduralSfx _sfx;
+        private GameSession _session;
         private SpriteRenderer _sprite;
         private Collider _hitbox;
         private Rigidbody _body;
@@ -19,11 +20,12 @@ namespace ShikiShiro
 
         public bool IsAlive { get; private set; }
 
-        public void Setup(Sprite sprite, Vector3 position, HordeDirector horde, CombatFx fx, ProceduralSfx sfx)
+        public void Setup(Sprite sprite, Vector3 position, HordeDirector horde, CombatFx fx, ProceduralSfx sfx, GameSession session)
         {
             _horde = horde;
             _fx = fx;
             _sfx = sfx;
+            _session = session;
             _anchor = position;
             _phase = Random.Range(0f, Mathf.PI * 2f);
             _bobSpeed = Random.Range(0.55f, 1.15f);
@@ -131,6 +133,13 @@ namespace ShikiShiro
             Vector3 dir = info.Direction.sqrMagnitude > 0.01f ? info.Direction : Vector3.up;
             _fx?.Explosion(boom, dir, info.ChainDepth > 0 ? 0.75f : 0.95f);
             _sfx?.PlayBalloonBurst();
+            if (_session != null)
+            {
+                Vector3 popup = info.Point.sqrMagnitude > 0.01f ? info.Point : boom;
+                int gained = _session.RegisterBalloonPop();
+                _session.NotifyHitPopup(new HitPopupInfo(popup, gained, _session.Combo, false, true));
+            }
+
             _horde?.ChainBurst(boom, info);
             gameObject.SetActive(false);
         }
